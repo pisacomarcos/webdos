@@ -8,9 +8,10 @@ Learn more about how you can use this plugin in the [documentation](https://docs
 
 ```js
 {
-  endpoint: "minio.server.com",
-  bucket: "test",
-  access_key_id: "YOUR-ACCESS-KEY",
-  secret_access_key: "YOUR-SECRET-KEY",
+  endpoint: [endpoint of your MinIO server],
+  bucket: [name of your bucket],
+  access_key_id: [access-key],
+  secret_access_key: [secret-access-key],
+  ssl_enabled: [if ssl is enabled or not]
 }
 ```
