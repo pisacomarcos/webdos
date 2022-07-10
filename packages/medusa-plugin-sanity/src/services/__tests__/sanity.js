@@ -1,6 +1,6 @@
+import SanityService from "../sanity"
 
-describe("ContentfulService", () => {
-  const ContentfulService = require("../contentful");
+describe(" SanityService", () => {
   describe("delete in medusa", () => {
     const regionService = {
       retrieve: jest.fn((id) => {
@@ -39,7 +39,8 @@ describe("ContentfulService", () => {
       }),
     }
     const eventBusService = {}
-    const service = new ContentfulService(
+
+    const service = new  SanityService(
       {
         regionService,
         productService,
@@ -53,6 +54,7 @@ describe("ContentfulService", () => {
         access_token: "test_token",
       }
     )
+
     const entry = {
       unpublish: jest.fn(async () => {
         return {
@@ -65,6 +67,7 @@ describe("ContentfulService", () => {
         }
       }),
     }
+
     service.contentful_ = {
       getSpace: async (space_id) => {
         return {
