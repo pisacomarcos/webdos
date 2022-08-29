@@ -937,6 +937,10 @@ class TotalsService extends TransactionBaseService {
    * @return the total discounts amount
    */
   getDiscountTotal(cartOrOrder: Cart | Order): number {
+    if (!cartOrOrder.items.length) {
+      return 0
+    }
+
     const subtotal = this.getSubtotal(cartOrOrder, {
       excludeNonDiscounts: true,
     })

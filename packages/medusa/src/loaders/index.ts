@@ -53,7 +53,7 @@ export default async ({
     this: MedusaContainer,
     name: string,
     registration: typeof asFunction | typeof asValue
-  ) {
+  ): MedusaContainer {
     const storeKey = name + "_STORE"
 
     if (this.registrations[storeKey] === undefined) {
