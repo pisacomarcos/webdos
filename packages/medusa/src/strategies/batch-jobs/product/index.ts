@@ -15,6 +15,7 @@ export type ProductExportBatchJobContext = {
     dynamicOptionColumnCount: number
     dynamicImageColumnCount: number
     dynamicSalesChannelsColumnCount: number
+    dynamicCollectionsColumnCount: number
   }
   list_config?: {
     select?: string[]
@@ -161,16 +162,10 @@ export const productExportSchemaDescriptors = new Map<
     },
   ],
   [
-    "Product Collection Title",
+    "Product Collections",
     {
-      accessor: (product: Product): string => product?.collection?.title ?? "",
-      entityName: "product",
-    },
-  ],
-  [
-    "Product Collection Handle",
-    {
-      accessor: (product: Product): string => product?.collection?.handle ?? "",
+      accessor: (product: Product): string =>
+        (product.collections.map((t) => t.title) ?? []).join(","),
       entityName: "product",
     },
   ],

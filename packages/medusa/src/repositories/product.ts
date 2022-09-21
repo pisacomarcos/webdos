@@ -6,7 +6,8 @@ import {
   In,
   Repository,
 } from "typeorm"
-import { PriceList,
+import {
+  PriceList,
   Product,
   SalesChannel
 } from "../models"
@@ -17,7 +18,8 @@ import {
 } from "../types/common"
 
 export type ProductSelector = Omit<Selector<Product>, "tags"> & {
-  tags: FindOperator<string[]>
+  tags: FindOperator<string[]>,
+  collections: FindOperator<string[]>,
 }
 
 export type DefaultWithoutRelations = Omit<
@@ -49,6 +51,9 @@ export class ProductRepository extends Repository<Product> {
   ): Promise<[Product[], number]> {
     const tags = optionsWithoutRelations?.where?.tags
     delete optionsWithoutRelations?.where?.tags
+
+    const collections = optionsWithoutRelations?.where?.collections
+    delete optionsWithoutRelations?.where?.collections
 
     const price_lists = optionsWithoutRelations?.where?.price_list_id
     delete optionsWithoutRelations?.where?.price_list_id
@@ -86,6 +91,11 @@ export class ProductRepository extends Repository<Product> {
       })
     }
 
+    if (collections) {
+      qb.leftJoin("product.collections", "collections").andWhere(`collections.id IN (:...collection_ids)`, {
+        collection_ids: collections.value,
+      })
+    }
     if (price_lists) {
       qb.leftJoin("product.variants", "variants")
         .leftJoin("variants.prices", "ma")
@@ -316,10 +326,9 @@ export class ProductRepository extends Repository<Product> {
     collectionId: string
   ): Promise<Product[]> {
     await this.createQueryBuilder()
-      .update(Product)
-      .set({ collection_id: collectionId })
-      .where({ id: In(productIds) })
-      .execute()
+      .relation(Product, 'collections')
+      .of(productIds)
+      .add({ id: collectionId });
 
     return this.findByIds(productIds)
   }
@@ -329,10 +338,9 @@ export class ProductRepository extends Repository<Product> {
     collectionId: string
   ): Promise<Product[]> {
     await this.createQueryBuilder()
-      .update(Product)
-      .set({ collection_id: null })
-      .where({ id: In(productIds), collection_id: collectionId })
-      .execute()
+      .relation(Product, 'collections')
+      .of(productIds)
+      .remove({ id: collectionId });
 
     return this.findByIds(productIds)
   }
@@ -342,11 +350,12 @@ export class ProductRepository extends Repository<Product> {
     options: FindWithoutRelationsOptions = { where: {} },
     relations: string[] = []
   ): Promise<[Product[], number]> {
+    const collections = options.where?.collections
     const cleanedOptions = this._cleanOptions(options)
 
     let qb = this.createQueryBuilder("product")
       .leftJoinAndSelect("product.variants", "variant")
-      .leftJoinAndSelect("product.collection", "collection")
+      .leftJoinAndSelect("product.collections", "collection")
       .select(["product.id"])
       .where(cleanedOptions.where)
       .andWhere(
@@ -361,6 +370,12 @@ export class ProductRepository extends Repository<Product> {
       .skip(cleanedOptions.skip)
       .take(cleanedOptions.take)
 
+    if (collections) {
+      qb.andWhere(`collection.id IN (:...collection_ids)`, {
+        collection_ids: collections.value,
+      })
+    }
+    
     if (cleanedOptions.withDeleted) {
       qb = qb.withDeleted()
     }
@@ -389,6 +404,10 @@ export class ProductRepository extends Repository<Product> {
 
     if ("price_list_id" in where) {
       delete where?.price_list_id
+    }
+
+    if ("collections" in where) {
+      delete where?.collections
     }
 
     return {
