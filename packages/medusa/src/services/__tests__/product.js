@@ -131,10 +131,36 @@ describe("ProductService", () => {
       jest.clearAllMocks()
     })
 
+    it("fail to create a product without a profile_id", async () => {
+      try {
+        await productService.create({
+          title: "Suit",
+          options: [],
+          tags: [{ value: "title" }, { value: "title2" }],
+          type: "type-1",
+          variants: [
+            {
+              id: "test1",
+              title: "green",
+            },
+            {
+              id: "test2",
+              title: "blue",
+            },
+          ],
+        })
+      } catch (error) {
+        expect(error.message).toBe(
+          `the property profile_id should appear as part of the payload`
+        )
+      }
+    })
+
     it("successfully create a product", async () => {
       await productService.create({
         title: "Suit",
         options: [],
+        profile_id: IdMap.getId("sp"),
         tags: [{ value: "title" }, { value: "title2" }],
         type: "type-1",
         variants: [
@@ -158,6 +184,7 @@ describe("ProductService", () => {
       expect(productRepository.create).toHaveBeenCalledTimes(1)
       expect(productRepository.create).toHaveBeenCalledWith({
         title: "Suit",
+        profile_id: IdMap.getId("sp"),
         variants: [
           {
             id: "test1",
