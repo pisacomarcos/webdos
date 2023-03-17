@@ -41,7 +41,7 @@ export default async ({
   dbConnection: Connection
   app: Express
 }> => {
-  const configModule = loadConfig(rootDirectory)
+  const configModule = await loadConfig(rootDirectory)
 
   const container = createMedusaContainer()
   container.register("configModule", asValue(configModule))
