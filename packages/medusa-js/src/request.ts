@@ -15,6 +15,7 @@ export interface Config {
   baseUrl: string
   maxRetries: number
   apiKey?: string
+  headers?: AxiosRequestHeaders
   publishableApiKey?: string
 }
 
@@ -31,8 +32,8 @@ const defaultConfig = {
 }
 
 class Client {
-  private axiosClient: AxiosInstance
-  private config: Config
+  protected axiosClient: AxiosInstance
+  protected config: Config
 
   constructor(config: Config) {
     /** @private @constant {AxiosInstance} */
@@ -158,6 +159,7 @@ class Client {
   createClient(config: Config): AxiosInstance {
     const client = axios.create({
       baseURL: config.baseUrl,
+      headers: config.headers,
     })
 
     rax.attach(client)
