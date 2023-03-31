@@ -23,6 +23,84 @@ class WebshipperFulfillmentService extends FulfillmentService {
       this.options_.coo_countries = [options.coo_countries]
     }
 
+    // Enable auto_calculate_dimensions, default is false
+    if (
+      typeof options.auto_calculate_dimensions === "boolean" &&
+      options.auto_calculate_dimensions
+    ) {
+      this.options_.auto_calculate_dimensions = options.auto_calculate_dimensions
+    } else {
+      this.options_.auto_calculate_dimensions = false
+    }
+
+    // Enable auto_calculate_weight, default is false
+    if (
+      typeof options.auto_calculate_weight === "boolean" &&
+      options.auto_calculate_weight
+    ) {
+      this.options_.auto_calculate_weight = options.auto_calculate_weight
+    } else {
+      this.options_.auto_calculate_weight = false
+    }
+
+    // Define weight unit, default is grams (g)
+    // Weight units from documentation: https://docs.webshipper.io/#packages
+    if (
+      typeof options.weight_unit === "string" &&
+      options.weight_unit &&
+      ["g", "oz", "lbs", "kg"].includes(options.weight_unit.toLowerCase())
+    ) {
+      this.options_.weight_unit = options.weight_unit.toLowerCase()
+    } else {
+      this.options_.weight_unit = "g"
+    }
+
+    // Define dimensions unit, default is centimeters (cm)
+    // Dimension units from documentation: https://docs.webshipper.io/#packages
+    if ( 
+      typeof options.dimensions_unit === "string" &&
+      options.dimensions_unit &&
+      ["cm", "m", "in", "ft"].includes(options.dimensions_unit.toLowerCase())
+    ) {
+      this.options_.dimensions_unit = options.dimensions_unit.toLowerCase()
+    } else {
+      this.options_.dimensions_unit = "cm"
+    }
+
+    // Define default weight, default is 500
+    if (
+      typeof options.default_weight === "number" &&
+      options.default_weight
+    ) {
+      this.options_.default_weight = options.default_weight
+    } else {
+      this.options_.default_weight = 500
+    }
+
+    // Define default dimensions, default is 15x15x15
+    if (
+      typeof options.default_dimensions === 'object' &&
+      options.default_dimensions
+    ) {
+      this.options_.default_dimensions = {
+        width: typeof options.default_dimensions.width === 'number' &&
+          options.default_dimensions.width ?
+          options.default_dimensions.width : 15,
+        height: typeof options.default_dimensions.height === 'number' &&
+          options.default_dimensions.height ?
+          options.default_dimensions.height : 15,
+        length: typeof options.default_dimensions.length === 'number' &&
+          options.default_dimensions.length ?
+          options.default_dimensions.length : 15,
+      }
+    } else {
+      this.options_.default_dimensions = {
+        width: 15,
+        height: 15,
+        length: 15,
+      }
+    }
+
     /** @private @const {logger} */
     this.logger_ = logger
 
@@ -98,6 +176,54 @@ class WebshipperFulfillmentService extends FulfillmentService {
   }
 
   /**
+   * Prepare package for Webshipper
+   * @param {Array} items
+   * @return {Object} Objet with units, weight and dimensions
+   */
+  preparePackage(items) {
+    return {
+      // If auto_calculate_weight is true Concat all items weight (if variant weight is not set, use variant product weight), else use default weight
+      weight: this.options_.auto_calculate_weight
+        ? items.map(({item, quantity}) =>  (item.variant?.weight ?? item.variant?.product?.weight ?? 0) * quantity)
+          .reduce((total, itemWeight) =>  total + itemWeight, 0) || this.options_.default_weight
+        : this.options_.default_weight,
+
+      weight_unit: this.options_.weight_unit,
+      
+      dimensions: {
+        unit: this.options_.dimensions_unit, 
+
+        // If auto_calculate_dimensions is true take the largest item height (if variant height is not set, use variant product height), else use default height
+        height: this.options_.auto_calculate_dimensions
+          ? Math.max(
+              ...items.map(
+                ({ item }) => item.variant?.height ?? item.variant?.product?.height ?? 0,
+              ),
+            ) || this.options_.default_dimensions.height
+          : this.options_.default_dimensions.height,
+
+        // If auto_calculate_dimensions is true take the largest item width (if variant width is not set, use variant product width), else use default width
+        width: this.options_.auto_calculate_dimensions
+          ? Math.max(
+              ...items.map(
+                ({ item }) => item.variant?.width ?? item.variant?.product?.width ?? 0,
+              ),
+            ) || this.options_.default_dimensions.width
+          : this.options_.default_dimensions.width,
+
+        // If auto_calculate_dimensions is true take the largest item length (if variant length is not set, use variant product length), else use default length
+        length: this.options_.auto_calculate_dimensions
+          ? Math.max(
+              ...items.map(
+                ({ item }) => item.variant?.length ?? item.variant?.product?.length ?? 0,
+              ),
+            ) || this.options_.default_dimensions.length
+          : this.options_.default_dimensions.length,
+      }
+    }
+  }
+
+  /**
    * Creates a return shipment in webshipper using the given method data, and
    * return lines.
    */
@@ -163,14 +289,7 @@ class WebshipperFulfillmentService extends FulfillmentService {
         included_documents: docs,
         packages: [
           {
-            weight: 500,
-            weight_unit: "g",
-            dimensions: {
-              unit: "cm",
-              height: 15,
-              width: 15,
-              length: 15,
-            },
+            ...this.preparePackage(returnOrder.items),
             customs_lines: await Promise.all(
               returnOrder.items.map(async ({ item, quantity }) => {
                 const totals = await this.totalsService_.getLineItemTotals(
