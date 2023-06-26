@@ -2,6 +2,7 @@ import SendGrid from "@sendgrid/mail"
 import { humanizeAmount, zeroDecimalCurrencies } from "medusa-core-utils"
 import { NotificationService } from "medusa-interfaces"
 import { IsNull, Not } from "typeorm"
+import { MedusaError } from "@medusajs/utils"
 
 class SendGridService extends NotificationService {
   static identifier = "sendgrid"
@@ -17,6 +18,7 @@ class SendGridService extends NotificationService {
    *      order_canceled_template: 4242,
    *      user_password_reset_template: 0000,
    *      customer_password_reset_template: 1111,
+   *      enable_endpoint: false
    *    }
    */
   constructor(
@@ -221,10 +223,14 @@ class SendGridService extends NotificationService {
     let templateId = this.getTemplateId(event)
 
     if (!templateId) {
-      return false
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Sendgrid service: No template was set for this event")
     }
 
     const data = await this.fetchData(event, eventData, attachmentGenerator)
+    if (!data) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Sendgrid service: Invalid event data was received")
+   }
+
     const attachments = await this.fetchAttachments(
       event,
       data,
@@ -256,9 +262,10 @@ class SendGridService extends NotificationService {
       })
     }
 
-    const status = await SendGrid.send(sendOptions)
-      .then(() => "sent")
-      .catch(() => "failed")
+   let status
+   await this.transporter_.sendMail(sendOptions)
+   .then(() => { status = "sent" })
+   .catch((error) => { status = "failed"; console.log(error) })
 
     // We don't want heavy docs stored in DB
     delete sendOptions.attachments
@@ -304,6 +311,9 @@ class SendGridService extends NotificationService {
    * @return {Promise} result of the send operation
    */
   async sendEmail(options) {
+    if (!this.options_.enable_endpoint) { 
+      return false 
+    }
     try {
       return SendGrid.send(options)
     } catch (error) {
