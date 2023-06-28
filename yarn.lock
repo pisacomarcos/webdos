@@ -4252,6 +4252,56 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@inquirer/checkbox@npm:^1.3.1":
+  version: 1.3.1
+  resolution: "@inquirer/checkbox@npm:1.3.1"
+  dependencies:
+    "@inquirer/core": ^2.1.0
+    "@inquirer/type": ^1.1.0
+    ansi-escapes: ^4.3.2
+    chalk: ^4.1.2
+    figures: ^3.2.0
+  checksum: 22c2622f6272f8853838dbec9dcc2c791e1ed279d5d16c21327114ccff23028c0ed3cfc4321add807dccb10619a3a61cc707afb03e014e59f198ffdd56aa5ca8
+  languageName: node
+  linkType: hard
+
+"@inquirer/confirm@npm:^2.0.2":
+  version: 2.0.2
+  resolution: "@inquirer/confirm@npm:2.0.2"
+  dependencies:
+    "@inquirer/core": ^2.1.0
+    "@inquirer/type": ^1.1.0
+    chalk: ^4.1.2
+  checksum: c694641cf76d4813bf7a6553702992982ae4e5a2209ee038460f683542215478980f80a6011805c4087328f09bc1f390aacf32be454cacca3c1c9a7080e17010
+  languageName: node
+  linkType: hard
+
+"@inquirer/core@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "@inquirer/core@npm:2.1.0"
+  dependencies:
+    "@inquirer/type": ^1.1.0
+    ansi-escapes: ^4.3.2
+    chalk: ^4.1.2
+    cli-spinners: ^2.8.0
+    cli-width: ^4.0.0
+    figures: ^3.2.0
+    mute-stream: ^1.0.0
+    run-async: ^3.0.0
+    string-width: ^4.2.3
+    strip-ansi: ^6.0.1
+    wrap-ansi: ^6.0.1
+  checksum: 9b6614e6b0b6fa23f5173b3c771f9f6b7c818edfafb82c10b8a0faf692d0ec38d37dc81d801e2fb06927f142ecf3b160967c6826106a7a0b1b305f3d11824f19
+  languageName: node
+  linkType: hard
+
+"@inquirer/type@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "@inquirer/type@npm:1.1.0"
+  checksum: 5c183cb3bb5c59a8bb497d7fc2768a25d53dfaa51cfaf8f3d15a97c60eccfa728810cc9d337d2fc2e164a92e8639b37aa61d52dd9748f7c2a879bb007124b097
+  languageName: node
+  linkType: hard
+
 "@ioredis/as-callback@npm:^3.0.0":
   version: 3.0.0
   resolution: "@ioredis/as-callback@npm:3.0.0"
@@ -13864,7 +13914,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ansi-align@npm:^3.0.0":
+"ansi-align@npm:^3.0.0, ansi-align@npm:^3.0.1":
   version: 3.0.1
   resolution: "ansi-align@npm:3.0.1"
   dependencies:
@@ -13981,7 +14031,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ansi-styles@npm:^6.0.0":
+"ansi-styles@npm:^6.0.0, ansi-styles@npm:^6.1.0":
   version: 6.2.1
   resolution: "ansi-styles@npm:6.2.1"
   checksum: 5d1ec38c123984bcedd996eac680d548f31828bd679a66db2bdf11844634dde55fec3efa9c6bb1d89056a5e79c1ac540c4c784d592ea1d25028a92227d2f2d5c
@@ -15690,6 +15740,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"boxen@npm:^7.1.0":
+  version: 7.1.0
+  resolution: "boxen@npm:7.1.0"
+  dependencies:
+    ansi-align: ^3.0.1
+    camelcase: ^7.0.1
+    chalk: ^5.2.0
+    cli-boxes: ^3.0.0
+    string-width: ^5.1.2
+    type-fest: ^2.13.0
+    widest-line: ^4.0.1
+    wrap-ansi: ^8.1.0
+  checksum: e37b79f2156dc17e6f9994fedd175ff33a674d651bda0fcd99ba36d1be0fd1954ef8e25a940fc2229fb9978673bc7b78bc31a7ded42b443c32ba2fbccdbfcfa0
+  languageName: node
+  linkType: hard
+
 "bplist-parser@npm:^0.1.0":
   version: 0.1.1
   resolution: "bplist-parser@npm:0.1.1"
@@ -16356,6 +16422,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"camelcase@npm:^7.0.1":
+  version: 7.0.1
+  resolution: "camelcase@npm:7.0.1"
+  checksum: 3adfc9a0e96d51b3a2f4efe90a84dad3e206aaa81dfc664f1bd568270e1bf3b010aad31f01db16345b4ffe1910e16ab411c7273a19a859addd1b98ef7cf4cfbd
+  languageName: node
+  linkType: hard
+
 "camelize@npm:^1.0.0":
   version: 1.0.1
   resolution: "camelize@npm:1.0.1"
@@ -16786,6 +16859,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cli-boxes@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "cli-boxes@npm:3.0.0"
+  checksum: 4db3e8fbfaf1aac4fb3a6cbe5a2d3fa048bee741a45371b906439b9ffc821c6e626b0f108bdcd3ddf126a4a319409aedcf39a0730573ff050fdd7b6731e99fb9
+  languageName: node
+  linkType: hard
+
 "cli-cursor@npm:^3.1.0":
   version: 3.1.0
   resolution: "cli-cursor@npm:3.1.0"
@@ -16836,7 +16916,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cli-spinners@npm:^2.6.1":
+"cli-spinners@npm:^2.6.1, cli-spinners@npm:^2.8.0":
   version: 2.9.0
   resolution: "cli-spinners@npm:2.9.0"
   checksum: c0d5437acc1ace7361b1c58a4fda3c92c2d8691ff3169ac658ce30faee71280b7aa706c072bcb6d0e380c232f3495f7d5ad4668c1391fe02c4d3a39d37798f44
@@ -17220,6 +17300,13 @@ __metadata:
   version: 10.0.1
   resolution: "commander@npm:10.0.1"
   checksum: 53f33d8927758a911094adadda4b2cbac111a5b377d8706700587650fd8f45b0bbe336de4b5c3fe47fd61f420a3d9bd452b6e0e6e5600a7e74d7bf0174f6efe3
+  languageName: node
+  linkType: hard
+
+"commander@npm:^11.0.0":
+  version: 11.0.0
+  resolution: "commander@npm:11.0.0"
+  checksum: 471c44cd2d31dee556753df6ceb5ef52ccded0ba6308d3ba7a76251aa0edeedf5ac66ca86cb6096cc8fe20997064233c476983d346265f85180e86312724de0c
   languageName: node
   linkType: hard
 
@@ -21817,7 +21904,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"figures@npm:^3.0.0":
+"figures@npm:^3.0.0, figures@npm:^3.2.0":
   version: 3.2.0
   resolution: "figures@npm:3.2.0"
   dependencies:
@@ -24832,6 +24919,29 @@ __metadata:
     through: ^2.3.6
     wrap-ansi: ^6.0.1
   checksum: f07fe6b0ce9587a306771c5d4c40e5f5bbb940c6a78648326e978ec7f26fb28a903cbf595fd23af3b35b633ec5eba1845e2c3d35888fe073c884f50046a738b8
+  languageName: node
+  linkType: hard
+
+"inquirer@npm:^9.2.7":
+  version: 9.2.7
+  resolution: "inquirer@npm:9.2.7"
+  dependencies:
+    ansi-escapes: ^4.3.2
+    chalk: ^5.2.0
+    cli-cursor: ^3.1.0
+    cli-width: ^4.0.0
+    external-editor: ^3.0.3
+    figures: ^5.0.0
+    lodash: ^4.17.21
+    mute-stream: 1.0.0
+    ora: ^5.4.1
+    run-async: ^3.0.0
+    rxjs: ^7.8.1
+    string-width: ^4.2.3
+    strip-ansi: ^6.0.1
+    through: ^2.3.6
+    wrap-ansi: ^6.0.1
+  checksum: bc94dbf514206bccd8e82a064d1f0cb03c99141c34b0cc60cd589b7d8129468c2b2479d5063c0c47076c67de24a4061e92f8ac496856cae276f35d5f3a08c0bd
   languageName: node
   linkType: hard
 
@@ -30451,6 +30561,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"medusa-module-cli@workspace:packages/module-cli":
+  version: 0.0.0-use.local
+  resolution: "medusa-module-cli@workspace:packages/module-cli"
+  dependencies:
+    "@inquirer/checkbox": ^1.3.1
+    "@inquirer/confirm": ^2.0.2
+    boxen: ^7.1.0
+    chalk: ^5.2.0
+    commander: ^11.0.0
+    inquirer: ^9.2.7
+    lodash: ^4.17.21
+    ora: ^6.3.1
+    pg-god: ^1.0.12
+    pluralize: ^8.0.0
+    typescript: ^5.1.3
+    winston: ^3.9.0
+  bin:
+    medusa-module: ./dist/index.js
+  languageName: unknown
+  linkType: soft
+
 "medusa-payment-adyen@workspace:packages/medusa-payment-adyen":
   version: 0.0.0-use.local
   resolution: "medusa-payment-adyen@workspace:packages/medusa-payment-adyen"
@@ -31996,7 +32127,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mute-stream@npm:1.0.0":
+"mute-stream@npm:1.0.0, mute-stream@npm:^1.0.0":
   version: 1.0.0
   resolution: "mute-stream@npm:1.0.0"
   checksum: dce2a9ccda171ec979a3b4f869a102b1343dee35e920146776780de182f16eae459644d187e38d59a3d37adf85685e1c17c38cf7bfda7e39a9880f7a1d10a74c
@@ -33181,7 +33312,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ora@npm:^6.3.0":
+"ora@npm:^6.3.0, ora@npm:^6.3.1":
   version: 6.3.1
   resolution: "ora@npm:6.3.1"
   dependencies:
@@ -39280,7 +39411,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"string-width@npm:^5.0.0":
+"string-width@npm:^5.0.0, string-width@npm:^5.0.1, string-width@npm:^5.1.2":
   version: 5.1.2
   resolution: "string-width@npm:5.1.2"
   dependencies:
@@ -41232,7 +41363,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"type-fest@npm:^2.18.0":
+"type-fest@npm:^2.13.0, type-fest@npm:^2.18.0":
   version: 2.19.0
   resolution: "type-fest@npm:2.19.0"
   checksum: a5a7ecf2e654251613218c215c7493574594951c08e52ab9881c9df6a6da0aeca7528c213c622bc374b4e0cb5c443aa3ab758da4e3c959783ce884c3194e12cb
@@ -41463,6 +41594,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"typescript@npm:^5.1.3":
+  version: 5.1.3
+  resolution: "typescript@npm:5.1.3"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 1faba8d5ffd4717864ddce767613c5ab77c1c8510c1ce21dc9b112a4c662357b9338dc0a6121615266d3a44ebec699f115ef2dabf18d9d7341ea1675692b9b24
+  languageName: node
+  linkType: hard
+
 "typescript@patch:typescript@4.9.5#~builtin<compat/typescript>, typescript@patch:typescript@^4.9.3#~builtin<compat/typescript>, typescript@patch:typescript@^4.9.5#~builtin<compat/typescript>":
   version: 4.9.5
   resolution: "typescript@patch:typescript@npm%3A4.9.5#~builtin<compat/typescript>::version=4.9.5&hash=7ad353"
@@ -41490,6 +41631,16 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: db16dd188048c172051825c7e6eea3e6bf577020625e5635fb8265d22683897d9ed7579b41a3a3e961fba5728c58e324d52041e9ca21d0dfc4bafa8bcf8e7a4b
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@^5.1.3#~builtin<compat/typescript>":
+  version: 5.1.3
+  resolution: "typescript@patch:typescript@npm%3A5.1.3#~builtin<compat/typescript>::version=5.1.3&hash=7ad353"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 6219383250b585b201c9ea10576164c9d5760c7a167bc761b118692c9fb8e88610f37730c0a1169d96ac19b29ed80418048763d0c1ff00ce48e051abbc213a9b
   languageName: node
   linkType: hard
 
@@ -43093,6 +43244,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"widest-line@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "widest-line@npm:4.0.1"
+  dependencies:
+    string-width: ^5.0.1
+  checksum: 7da9525ba45eaf3e4ed1a20f3dcb9b85bd9443962450694dae950f4bdd752839747bbc14713522b0b93080007de8e8af677a61a8c2114aa553ad52bde72d0f9c
+  languageName: node
+  linkType: hard
+
 "wildcard@npm:^2.0.0":
   version: 2.0.0
   resolution: "wildcard@npm:2.0.0"
@@ -43127,6 +43287,25 @@ __metadata:
     triple-beam: ^1.3.0
     winston-transport: ^4.5.0
   checksum: 8d302d992e53e46c8f0355fae515356190d2dc9feaa8ae99afa5bba227f1fe2343ca9e367e5949a9b711f5f982e5b9280393d16be99fcd432660fd9597749954
+  languageName: node
+  linkType: hard
+
+"winston@npm:^3.9.0":
+  version: 3.9.0
+  resolution: "winston@npm:3.9.0"
+  dependencies:
+    "@colors/colors": 1.5.0
+    "@dabh/diagnostics": ^2.0.2
+    async: ^3.2.3
+    is-stream: ^2.0.0
+    logform: ^2.4.0
+    one-time: ^1.0.0
+    readable-stream: ^3.4.0
+    safe-stable-stringify: ^2.3.1
+    stack-trace: 0.0.x
+    triple-beam: ^1.3.0
+    winston-transport: ^4.5.0
+  checksum: e789b0c57bc3b0173c6fbd7caa4d60816a1a45cd796e5643e1bea65161d44c82a139b69f6ffc738a2919d80b5afc6df46c01947972173fc847ebcc668285fab3
   languageName: node
   linkType: hard
 
@@ -43181,6 +43360,17 @@ __metadata:
     string-width: ^4.1.0
     strip-ansi: ^6.0.0
   checksum: d15fc12c11e4cbc4044a552129ebc75ee3f57aa9c1958373a4db0292d72282f54373b536103987a4a7594db1ef6a4f10acf92978f79b98c49306a4b58c77d4da
+  languageName: node
+  linkType: hard
+
+"wrap-ansi@npm:^8.1.0":
+  version: 8.1.0
+  resolution: "wrap-ansi@npm:8.1.0"
+  dependencies:
+    ansi-styles: ^6.1.0
+    string-width: ^5.0.1
+    strip-ansi: ^7.0.1
+  checksum: 138ff58a41d2f877eae87e3282c0630fc2789012fc1af4d6bd626eeb9a2f9a65ca92005e6e69a75c7b85a68479fe7443c7dbe1eb8fbaa681a4491364b7c55c60
   languageName: node
   linkType: hard
 

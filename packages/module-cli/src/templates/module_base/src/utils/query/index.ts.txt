@@ -1,5 +1,5 @@
 /**
- * Move to a new build query utils
+ * TODO: Move to a new build query utils
  */
 import { DAL, FindConfig } from "@medusajs/types"
 import { isObject } from "@medusajs/utils"
