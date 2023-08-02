@@ -1,5 +1,6 @@
 import { ProductVariantInfo, RegionInfo } from "../types"
 import { isEmpty } from "../utils"
+import { currencies } from "@medusajs/medusa"
 
 type FormatVariantPriceParams = {
   variant: ProductVariantInfo
@@ -125,15 +126,12 @@ export const formatAmount = ({
   })
 }
 
-// we should probably add a more extensive list
-const noDivisionCurrencies = ["krw", "jpy", "vnd"]
-
 const convertToDecimal = (amount: number, region: RegionInfo) => {
-  const divisor = noDivisionCurrencies.includes(
-    region?.currency_code?.toLowerCase()
-  )
-    ? 1
-    : 100
+  const divisor = 100;
+  const currencyInfo = currencies[region.currency_code.toUpperCase()];
+  if (currencyInfo) {
+    divisor = 10 ** currencyInfo.decimal_digits;
+  }
 
   return Math.floor(amount) / divisor
 }
