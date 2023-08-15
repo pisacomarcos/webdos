@@ -181,6 +181,11 @@ class Discount {
  *     example:
  *       ip: "::1"
  *       user_agent: "Chrome"
+ *   metadata:
+ *     description: "An optional object to provide metadata to the Cart."
+ *     type: object
+ *     example:
+ *       car: "white"
  */
 export class StorePostCartsCartReq {
   @IsOptional()
@@ -221,6 +226,9 @@ export class StorePostCartsCartReq {
 
   @IsOptional()
   context?: object
+
+  @IsOptional()
+  metadata?: Record<string, unknown>
 
   @FeatureFlagDecorators(SalesChannelFeatureFlag.key, [
     IsString(),
