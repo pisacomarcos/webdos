@@ -202,6 +202,7 @@ const OrderDetails = () => {
   const { getWidgets } = useWidgets()
 
   const handleDeleteOrder = async () => {
+
     const shouldDelete = await dialog({
       heading: "Cancel order",
       text: "Are you sure you want to cancel the order?",
@@ -220,7 +221,10 @@ const OrderDetails = () => {
     })
   }
 
+
   const allFulfillments = gatherAllFulfillments(order)
+
+  const [orderActionables, setOrderActionables] = useState<ActionType[] | undefined>()
 
   const customerActionables: ActionType[] = [
     {
@@ -258,6 +262,29 @@ const OrderDetails = () => {
       openAddressModal()
     },
   })
+
+
+  useEffect(() => {
+    if (!order) return
+    const actions: ActionType[] = []
+
+    if (order.status !== "canceled") {
+      const deleteOrderAction: ActionType = {
+        label: "Cancel Order",
+        icon: <CancelIcon size={"20"} />,
+        variant: "danger",
+        onClick: () => handleDeleteOrder(),
+      }
+      actions.push(deleteOrderAction)
+    }
+
+    if (!actions.length) {
+      setOrderActionables(undefined)
+      return
+    }
+
+    setOrderActionables(actions)
+  }, [order])
 
   if (order?.email) {
     customerActionables.push({
@@ -332,14 +359,7 @@ const OrderDetails = () => {
                   )}
                   status={<OrderStatusComponent status={order.status} />}
                   forceDropdown={true}
-                  actionables={[
-                    {
-                      label: "Cancel Order",
-                      icon: <CancelIcon size={"20"} />,
-                      variant: "danger",
-                      onClick: () => handleDeleteOrder(),
-                    },
-                  ]}
+                  actionables={orderActionables}
                 >
                   <div className="mt-6 flex space-x-6 divide-x">
                     <div className="flex flex-col">
@@ -514,7 +534,7 @@ const OrderDetails = () => {
                             {order.shipping_address.city},{" "}
                             {
                               isoAlpha2Countries[
-                                order.shipping_address.country_code?.toUpperCase()
+                              order.shipping_address.country_code?.toUpperCase()
                               ]
                             }
                           </span>
