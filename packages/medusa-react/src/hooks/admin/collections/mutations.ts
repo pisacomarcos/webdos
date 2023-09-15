@@ -29,7 +29,7 @@ export const useAdminCreateCollection = (
   return useMutation(
     (payload: AdminPostCollectionsReq) =>
       client.admin.collections.create(payload),
-    buildOptions(queryClient, adminCollectionKeys.lists(), options)
+    buildOptions(queryClient, [adminCollectionKeys.lists()], options)
   )
 }
 
