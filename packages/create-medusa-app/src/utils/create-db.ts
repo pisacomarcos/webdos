@@ -6,10 +6,18 @@ import logMessage from "./log-message.js"
 import formatConnectionString from "./format-connection-string.js"
 import { Ora } from "ora"
 import { getCurrentOs } from "./get-current-os.js"
+import ProcessManager from "./process-manager.js"
+import promiseExec from "./promise-exec.js"
 
 type CreateDbOptions = {
   client: pg.Client
   db: string
+}
+
+type DbResponse = {
+  client: pg.Client
+  dbConnectionString: string
+  isRemote?: boolean
 }
 
 export default async function createDb({ client, db }: CreateDbOptions) {
@@ -40,10 +48,112 @@ export async function runCreateDb({
   }
 }
 
-async function getForDbName(dbName: string): Promise<{
-  client: pg.Client
-  dbConnectionString: string
-}> {
+async function getForDbName(
+  dbName: string,
+  processManager: ProcessManager,
+  abortController: AbortController,
+  spinner: Ora,
+  neonDb = false
+): Promise<DbResponse> {
+  return !neonDb
+    ? getLocalForDbName(dbName)
+    : getNeonForDbName(dbName, processManager, abortController, spinner)
+}
+
+async function getNeonForDbName(
+  dbName: string,
+  processManager: ProcessManager,
+  abortController: AbortController,
+  spinner: Ora
+): Promise<DbResponse> {
+  let client!: pg.Client
+  let dbConnectionString = ""
+
+  const npxOptions = {
+    signal: abortController?.signal,
+    env: {
+      ...process.env,
+      npm_config_yes: "yes",
+    },
+  }
+
+  spinner.start(
+    "Authenticating with Neon. A browser window will open in a moment..."
+  )
+
+  await processManager.runProcess({
+    process: async () => {
+      const proc = await promiseExec("npx neonctl@latest auth", npxOptions)
+
+      // the message is outputted by neonctl as an error for some reason
+      if (
+        !proc.stderr.toLowerCase().includes("auth complete") &&
+        !proc.stdout.toLowerCase().includes("auth complete")
+      ) {
+        logMessage({
+          message: `An error occurred while authenticating with Neon: ${proc.stderr}`,
+          type: "error",
+        })
+        process.exit()
+      }
+    },
+  })
+
+  spinner.succeed("Authenticated with Neon").start("Creating a Neon project...")
+
+  await processManager.runProcess({
+    process: async () => {
+      try {
+        const proc = await promiseExec(
+          `npx neonctl@latest projects create --name ${dbName} --output json`,
+          npxOptions
+        )
+
+        // the response by neonctl is outputted as an error for some reason
+        const response = JSON.parse(proc.stdout || proc.stderr)
+        if (!response?.connection_uris) {
+          // some error or other issue was uncaught,
+          // throw an error with it
+          throw new Error(response)
+        }
+        dbConnectionString = `${response?.connection_uris[0]?.connection_uri}?sslmode=require`
+
+        client = (await getForDbUrl(dbConnectionString)).client
+
+        spinner.succeed(`Created project ${dbName} in Neon.`).stop()
+      } catch (e) {
+        if (
+          typeof e === "object" &&
+          e !== null &&
+          "stderr" in e &&
+          typeof e.stderr === "string" &&
+          e.stderr.toLowerCase().includes("projects limit exceeded")
+        ) {
+          logMessage({
+            message: `Your Neon plan does not allow creating a new project. Either upgrade your plan or delete an existing project, then try again.`,
+            type: "error",
+          })
+        } else {
+          logMessage({
+            message: `An error occurred while creating a project in Neon: ${JSON.stringify(
+              e
+            )}`,
+            type: "error",
+          })
+        }
+        process.exit()
+      }
+    },
+  })
+
+  return {
+    client,
+    dbConnectionString,
+    isRemote: true,
+  }
+}
+
+async function getLocalForDbName(dbName: string): Promise<DbResponse> {
   let client!: pg.Client
   let postgresUsername = "postgres"
   let postgresPassword = ""
@@ -102,10 +212,7 @@ async function getForDbName(dbName: string): Promise<{
   }
 }
 
-async function getForDbUrl(dbUrl: string): Promise<{
-  client: pg.Client
-  dbConnectionString: string
-}> {
+async function getForDbUrl(dbUrl: string): Promise<DbResponse> {
   let client!: pg.Client
 
   try {
@@ -128,12 +235,26 @@ async function getForDbUrl(dbUrl: string): Promise<{
 export async function getDbClientAndCredentials({
   dbName = "",
   dbUrl = "",
-}): Promise<{
-  client: pg.Client
-  dbConnectionString: string
-}> {
+  processManager,
+  abortController,
+  spinner,
+  neonDb = false,
+}: {
+  dbName?: string
+  dbUrl?: string
+  processManager: ProcessManager
+  abortController: AbortController
+  spinner: Ora
+  neonDb?: boolean
+}): Promise<DbResponse> {
   if (dbName) {
-    return await getForDbName(dbName)
+    return await getForDbName(
+      dbName,
+      processManager,
+      abortController,
+      spinner,
+      neonDb
+    )
   } else {
     return await getForDbUrl(dbUrl)
   }

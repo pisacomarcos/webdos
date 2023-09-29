@@ -42,6 +42,7 @@ export type CreateOptions = {
   migrations?: boolean
   directoryPath?: string
   withNextjsStarter?: boolean
+  neonDb?: boolean
 }
 
 export default async ({
@@ -54,6 +55,7 @@ export default async ({
   migrations,
   directoryPath,
   withNextjsStarter = false,
+  neonDb = false,
 }: CreateOptions) => {
   track("CREATE_CLI")
   if (repoUrl) {
@@ -62,6 +64,8 @@ export default async ({
   if (seed) {
     track("SEED_SELECTED", { seed })
   }
+
+  track("CMA_EXPERIMENT_NEON", neonDb)
 
   const spinner: Ora = ora()
   const processManager = new ProcessManager()
@@ -103,10 +107,18 @@ export default async ({
     !skipDb && migrations ? await askForAdminEmail(seed, boilerplate) : ""
   const installNextjs = withNextjsStarter || (await askForNextjsStarter())
 
-  const { client, dbConnectionString } = !skipDb
+  const {
+    client,
+    dbConnectionString,
+    isRemote = false,
+  } = !skipDb
     ? await getDbClientAndCredentials({
         dbName,
         dbUrl,
+        processManager,
+        abortController,
+        spinner,
+        neonDb,
       })
     : { client: null, dbConnectionString: "" }
   isDbInitialized = true
@@ -148,7 +160,7 @@ export default async ({
       })
     : ""
 
-  if (client && !dbUrl) {
+  if (client && !dbUrl && !isRemote) {
     factBoxOptions.interval = displayFactBox({
       ...factBoxOptions,
       title: "Creating database...",
@@ -160,6 +172,9 @@ export default async ({
       message: `Database ${dbName} created`,
     })
   }
+
+  // close db connection
+  await client?.end()
 
   // prepare project
   let inviteToken: string | undefined = undefined
@@ -192,9 +207,6 @@ export default async ({
     })
 
     return
-  } finally {
-    // close db connection
-    await client?.end()
   }
 
   spinner.succeed(chalk.green("Project Prepared"))
