@@ -225,7 +225,13 @@ class OrderService extends TransactionBaseService {
         : ["shipping_address", "customer"]
     }
 
-    const query = buildQuery(selector, config) as FindManyOptions<Order>
+    // Remove fields related to totals from the DB select
+    const dbConfig = JSON.parse(JSON.stringify(config))
+    dbConfig.select = (config.select ?? []).filter(
+      (field) => !field.endsWith("_total")
+    )
+
+    const query = buildQuery(selector, dbConfig) as FindManyOptions<Order>
 
     if (q) {
       const where = query.where as FindOptionsWhere<Order>
@@ -330,6 +336,7 @@ class OrderService extends TransactionBaseService {
       "shipping_total",
       "discount_total",
       "gift_card_total",
+      "gift_card_tax_total",
       "total",
       "paid_total",
       "refunded_total",
