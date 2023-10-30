@@ -1,14 +1,24 @@
 import { MoneyAmount, PriceList, Region } from "@medusajs/medusa"
-import path from "path"
-
-import { bootstrapApp } from "../../../../environment-helpers/bootstrap-app"
-import setupServer from "../../../../environment-helpers/setup-server"
-import { setPort, useApi } from "../../../../environment-helpers/use-api"
 import { initDb, useDb } from "../../../../environment-helpers/use-db"
-import { simpleProductFactory } from "../../../../factories"
+import { setPort, useApi } from "../../../../environment-helpers/use-api"
+import { simpleDiscountFactory, simpleProductFactory } from "../../../../factories"
+
+import { AllocationType } from "@medusajs/medusa"
+import { AxiosInstance } from "axios"
+import { DiscountRuleType } from "@medusajs/medusa"
 import { ProductVariantMoneyAmount } from "@medusajs/medusa"
+import adminSeeder from "../../../../helpers/admin-seeder"
+import { bootstrapApp } from "../../../../environment-helpers/bootstrap-app"
+import path from "path"
+import setupServer from "../../../../environment-helpers/setup-server"
 
 jest.setTimeout(30000)
+
+const adminHeaders = {
+  headers: {
+    "x-medusa-access-token": "test_token",
+  },
+}
 
 describe("/store/carts", () => {
   let medusaProcess
@@ -24,7 +34,9 @@ describe("/store/carts", () => {
     const cwd = path.resolve(path.join(__dirname, "..", "..", ".."))
     dbConnection = await initDb({ cwd })
     medusaProcess = await setupServer({ cwd, verbose: true })
-    const { app, port } = await bootstrapApp({ cwd })
+    const { app, port } = await bootstrapApp({ cwd, env: { 
+      MEDUSA_FF_ISOLATE_PRODUCT_DOMAIN: true
+    } })
     setPort(port)
     express = app.listen(port, () => {
       process.send?.(port)
@@ -43,11 +55,14 @@ describe("/store/carts", () => {
 
     beforeEach(async () => {
       const manager = dbConnection.manager
+      await adminSeeder(dbConnection)
+
       await manager.insert(Region, {
         id: "region",
         name: "Test Region",
         currency_code: "usd",
         tax_rate: 0,
+        automatic_taxes: false
       })
 
       await manager.query(
@@ -77,7 +92,7 @@ describe("/store/carts", () => {
     })
 
     it("should create a cart", async () => {
-      const api = useApi()
+      const api = useApi()! as AxiosInstance
       const response = await api.post("/store/carts")
 
       expect(response.status).toEqual(200)
@@ -87,7 +102,7 @@ describe("/store/carts", () => {
     })
 
     it("should fail to create a cart when no region exist", async () => {
-      const api = useApi()
+      const api = useApi()! as AxiosInstance
 
       await dbConnection.manager.query(
         `UPDATE "country"
@@ -139,7 +154,7 @@ describe("/store/carts", () => {
         money_amount_id: ma_sale_1.id,
       })
 
-      const api = useApi()
+      const api = useApi()! as AxiosInstance
 
       const response = await api
         .post("/store/carts", {
@@ -154,7 +169,6 @@ describe("/store/carts", () => {
             },
           ],
         })
-        .catch((err) => console.log(err))
 
       response.data.cart.items.sort((a, b) => a.quantity - b.quantity)
 
@@ -178,8 +192,68 @@ describe("/store/carts", () => {
       expect(getRes.status).toEqual(200)
     })
 
+    it.only("should apply discount to cart", async () => {
+      const api = useApi()! as AxiosInstance
+      
+      await simpleDiscountFactory(dbConnection, {
+        code: 'test-discount',
+        regions: ['region'],
+        rule: { 
+          allocation: AllocationType.TOTAL, 
+          type: DiscountRuleType.PERCENTAGE,
+          value: 50,
+        }
+      })
+
+      const payload = {
+        title: "Test",
+        discountable: false,
+        description: "test-product-description",
+        images: ["test-image.png", "test-image-2.png"],
+        options: [{ title: "size" }, { title: "color" }],
+        variants: [
+          {
+            title: "Test variant",
+            inventory_quantity: 10,
+            allow_backorder: true,
+            prices: [{ currency_code: "usd", amount: 100 }],
+            options: [{ value: "large" }, { value: "green" }],
+          },
+        ],
+      }
+
+      const product = await api.post("/admin/products", payload, adminHeaders)
+
+      const variantId = product.data.product.variants[0].id
+
+      const response = await api
+        .post("/store/carts", {
+          region_id: 'region', 
+          items: [
+            {
+              variant_id: variantId,
+              quantity: 2,
+            },
+          ],
+        })
+
+      const cartId = response.data.cart.id
+
+      const cartResult = await api.post(`/store/carts/${cartId}`, { 
+        discounts: [ { code: 'test-discount' }]
+      })
+
+      expect(cartResult.data.cart.items).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          "subtotal": 200,
+          "discount_total": 100,
+          "total": 100,
+        })
+      ]))
+    })
+
     it("should create a cart with country", async () => {
-      const api = useApi()
+      const api = useApi()! as AxiosInstance
       const response = await api.post("/store/carts", {
         country_code: "us",
       })
@@ -192,7 +266,7 @@ describe("/store/carts", () => {
     })
 
     it("should create a cart with context", async () => {
-      const api = useApi()
+      const api = useApi()! as AxiosInstance
 
       const response = await api.post("/store/carts", {
         context: {
