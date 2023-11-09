@@ -311,8 +311,11 @@ export default class OrderEditService extends TransactionBaseService {
   async updateLineItem(
     orderEditId: string,
     itemId: string,
-    data: { quantity: number }
+    data: { quantity?: number, unit_price?: number }
   ): Promise<void> {
+
+    if (!Object.keys(data).length) return new Promise<void>(()=>{})
+
     return await this.atomicPhase_(async (manager) => {
       const orderEdit = await this.retrieve(orderEditId, {
         select: [
@@ -373,6 +376,7 @@ export default class OrderEditService extends TransactionBaseService {
 
       await lineItemServiceTx.update(change.line_item_id!, {
         quantity: data.quantity,
+        unit_price: data.unit_price,
       })
 
       await this.refreshAdjustments(orderEditId, {
