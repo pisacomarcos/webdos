@@ -1,4 +1,8 @@
-import { JoinerRelationship, JoinerServiceConfig, RemoteJoinerQuery } from "../joiner"
+import {
+  JoinerRelationship,
+  JoinerServiceConfig,
+  RemoteJoinerQuery,
+} from "../joiner"
 
 import { Logger } from "../logger"
 import { MedusaContainer } from "../common"
@@ -258,6 +262,14 @@ export type ModuleServiceInitializeCustomDataLayerOptions = {
   manager?: any
   repositories?: {
     [key: string]: Constructor<RepositoryService>
+  }
+}
+
+export interface IModuleService {
+  __joinerConfig?(): ModuleJoinerConfig
+
+  __hooks?: {
+    onApplicationStart?: () => Promise<void>
   }
 }
 

@@ -8,6 +8,7 @@ import {
   ManyToMany,
   ManyToOne,
   OneToMany,
+  OnInit,
   OptionalProps,
   PrimaryKey,
   Property,
@@ -175,6 +176,11 @@ class Product {
 
   @Property({ columnType: "jsonb", nullable: true })
   metadata?: Record<string, unknown> | null
+
+  @OnInit()
+  onInit() {
+    this.id = generateEntityId(this.id, "prod")
+  }
 
   @BeforeCreate()
   beforeCreate() {

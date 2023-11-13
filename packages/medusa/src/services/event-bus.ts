@@ -1,4 +1,4 @@
-import { EventBusTypes, Logger } from "@medusajs/types"
+import { EmitData, EventBusTypes, Logger, Message } from "@medusajs/types"
 import { DatabaseErrorCode, EventBusUtils } from "@medusajs/utils"
 import { EntityManager } from "typeorm"
 import { TransactionBaseService } from "../interfaces"
@@ -27,9 +27,7 @@ export default class EventBusService
   protected readonly config_: ConfigModule
   protected readonly stagedJobService_: StagedJobService
   // eslint-disable-next-line max-len
-  protected get eventBusModuleService_(): EventBusTypes.IEventBusModuleService {
-    return this.__container__.eventBusModuleService
-  }
+  protected readonly eventBusModuleService_: EventBusTypes.IEventBusModuleService
 
   protected readonly logger_: Logger
 
@@ -37,7 +35,7 @@ export default class EventBusService
   protected enqueue_: Promise<void>
 
   constructor(
-    { stagedJobService, logger }: InjectedDependencies,
+    { stagedJobService, logger, eventBusModuleService }: InjectedDependencies,
     config,
     isSingleton = true
   ) {
@@ -47,6 +45,7 @@ export default class EventBusService
     this.logger_ = logger
     this.config_ = config
     this.stagedJobService_ = stagedJobService
+    this.eventBusModuleService_ = eventBusModuleService
 
     if (process.env.NODE_ENV !== "test" && isSingleton) {
       this.startEnqueuer()
@@ -118,6 +117,8 @@ export default class EventBusService
    */
   async emit<T>(data: EventBusTypes.EmitData<T>[]): Promise<StagedJob[] | void>
 
+  async emit<T>(data: EventBusTypes.Message<T>[]): Promise<StagedJob[] | void>
+
   /**
    * Calls all subscribers when an event occurs.
    * @param {string} eventName - the name of the event to be process.
@@ -133,7 +134,10 @@ export default class EventBusService
 
   async emit<
     T,
-    TInput extends string | EventBusTypes.EmitData<T>[] = string,
+    TInput extends
+      | string
+      | EventBusTypes.EmitData<T>[]
+      | EventBusTypes.Message<T>[] = string,
     TResult = TInput extends EventBusTypes.EmitData<T>[]
       ? StagedJob[]
       : StagedJob
@@ -144,16 +148,19 @@ export default class EventBusService
   ): Promise<TResult | void> {
     const manager = this.activeManager_
     const isBulkEmit = !isString(eventNameOrData)
+    const dataBody = isString(eventNameOrData)
+      ? data ?? (data as Message<T>).body
+      : undefined
     const events: EventBusTypes.EmitData[] = isBulkEmit
       ? eventNameOrData.map((event) => ({
           eventName: event.eventName,
-          data: event.data,
+          data: (event as EmitData).data ?? (event as Message<T>).body.data,
           options: event.options,
         }))
       : [
           {
             eventName: eventNameOrData,
-            data: data,
+            data: dataBody,
             options: options,
           },
         ]

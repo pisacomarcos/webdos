@@ -1,3 +1,4 @@
+import { MedusaModule } from "@medusajs/modules-sdk"
 import { FlagRouter } from "@medusajs/utils"
 import { defaultRelationsExtended } from "."
 import {
@@ -6,7 +7,6 @@ import {
   StoreService,
 } from "../../../../services"
 import { ExtendedStoreDTO } from "../../../../types/store"
-import { MedusaModule } from "@medusajs/modules-sdk"
 
 /**
  * @oas [get] /admin/store

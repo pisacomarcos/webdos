@@ -6,6 +6,7 @@ import { initialize } from "../../../../src"
 import { EventBusService } from "../../../__fixtures__/event-bus"
 import { createCollections } from "../../../__fixtures__/product"
 import { DB_URL, TestDatabase } from "../../../utils"
+import { MedusaModule } from "@medusajs/modules-sdk"
 
 describe("ProductModuleService product collections", () => {
   let service: IProductModuleService
@@ -74,6 +75,7 @@ describe("ProductModuleService product collections", () => {
   afterEach(async () => {
     await TestDatabase.clearDatabase()
     jest.clearAllMocks()
+    MedusaModule.clearInstances()
   })
 
   describe("listCollections", () => {
@@ -280,7 +282,15 @@ describe("ProductModuleService product collections", () => {
       expect(eventBusSpy).toHaveBeenCalledWith([
         {
           eventName: "product-collection.deleted",
-          data: { id: collectionId },
+          body: {
+            data: { id: collectionId },
+            metadata: {
+              action: "deleted",
+              object: "ProductCollection",
+              service: "productService",
+            },
+          },
+          options: undefined,
         },
       ])
     })
@@ -303,7 +313,15 @@ describe("ProductModuleService product collections", () => {
       expect(eventBusSpy).toHaveBeenCalledWith([
         {
           eventName: "product-collection.updated",
-          data: { id: collectionId },
+          body: {
+            data: { id: collectionId },
+            metadata: {
+              action: "updated",
+              object: "ProductCollection",
+              service: "productService",
+            },
+          },
+          options: undefined,
         },
       ])
     })
@@ -432,7 +450,15 @@ describe("ProductModuleService product collections", () => {
       expect(eventBusSpy).toHaveBeenCalledWith([
         {
           eventName: "product-collection.created",
-          data: { id: collections[0].id },
+          body: {
+            data: { id: collections[0].id },
+            metadata: {
+              action: "created",
+              object: "ProductCollection",
+              service: "productService",
+            },
+          },
+          options: undefined,
         },
       ])
     })

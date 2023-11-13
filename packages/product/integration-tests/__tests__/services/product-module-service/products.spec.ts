@@ -1,6 +1,9 @@
 import { MedusaModule } from "@medusajs/modules-sdk"
-import { IProductModuleService, ProductTypes } from "@medusajs/types"
-import { kebabCase } from "@medusajs/utils"
+import {
+  IProductModuleService,
+  ProductTypes,
+  UpdateProductDTO,
+} from "@medusajs/types"
 import {
   Product,
   ProductCategory,
@@ -15,6 +18,9 @@ import { createCollections, createTypes } from "../../../__fixtures__/product"
 import { createProductCategories } from "../../../__fixtures__/product-category"
 import { buildProductAndRelationsData } from "../../../__fixtures__/product/data/create-product"
 import { DB_URL, TestDatabase } from "../../../utils"
+import { kebabCase } from "@medusajs/utils"
+
+const eventBusSpy = jest.spyOn(EventBusService.prototype, "emit")
 
 const beforeEach_ = async () => {
   await TestDatabase.setupDatabase()
@@ -23,7 +29,9 @@ const beforeEach_ = async () => {
 
 const afterEach_ = async () => {
   await TestDatabase.clearDatabase()
+  eventBusSpy.mockClear()
   jest.clearAllMocks()
+  MedusaModule.clearInstances()
 }
 
 describe("ProductModuleService products", function () {
@@ -165,21 +173,36 @@ describe("ProductModuleService products", function () {
     afterEach(afterEach_)
 
     it("should update a product and upsert relations that are not created yet", async () => {
-      const data = buildProductAndRelationsData({
-        images,
-        thumbnail: images[0],
-      })
+      const product = (await module.retrieve(productOne.id, {
+        relations: [
+          "images",
+          "variants",
+          "options",
+          "options.values",
+          "variants.options",
+          "tags",
+          "type",
+        ],
+      })) as unknown as UpdateProductDTO
 
-      const updateData = {
-        ...data,
-        id: productOne.id,
-        title: "updated title",
-      }
+      product.title = "updated title"
+      product.options = [
+        {
+          title: "New option",
+        },
+      ]
+      product.variants![0].options = [
+        {
+          value: "New option value",
+        },
+      ]
 
-      const updatedProducts = await module.update([updateData])
+      const updatedProducts = await module.update([
+        product as unknown as UpdateProductDTO,
+      ])
       expect(updatedProducts).toHaveLength(1)
 
-      const product = await module.retrieve(updateData.id, {
+      const updatedProduct = await module.retrieve(productOne.id, {
         relations: [
           "images",
           "variants",
@@ -191,62 +214,35 @@ describe("ProductModuleService products", function () {
         ],
       })
 
-      expect(product.images).toHaveLength(1)
-      expect(product.variants[0].options).toHaveLength(1)
-      expect(product.tags).toHaveLength(1)
-      expect(product.variants).toHaveLength(1)
+      expect(updatedProduct.variants).toHaveLength(1)
+      expect(updatedProduct.variants[0].options).toHaveLength(1)
 
-      expect(product).toEqual(
+      expect(updatedProduct).toEqual(
         expect.objectContaining({
           id: expect.any(String),
           title: "updated title",
-          description: updateData.description,
-          subtitle: updateData.subtitle,
-          is_giftcard: updateData.is_giftcard,
-          discountable: updateData.discountable,
-          thumbnail: images[0],
-          status: updateData.status,
-          images: expect.arrayContaining([
-            expect.objectContaining({
-              id: expect.any(String),
-              url: images[0],
-            }),
-          ]),
           options: expect.arrayContaining([
             expect.objectContaining({
               id: expect.any(String),
-              title: updateData.options[0].title,
+              title: "New option",
               values: expect.arrayContaining([
                 expect.objectContaining({
                   id: expect.any(String),
-                  value: updateData.variants[0].options?.[0].value,
+                  value: "New option value",
                 }),
               ]),
             }),
           ]),
-          tags: expect.arrayContaining([
-            expect.objectContaining({
-              id: expect.any(String),
-              value: updateData.tags[0].value,
-            }),
-          ]),
-          type: expect.objectContaining({
-            id: expect.any(String),
-            value: updateData.type.value,
-          }),
           variants: expect.arrayContaining([
             expect.objectContaining({
               id: expect.any(String),
-              title: updateData.variants[0].title,
-              sku: updateData.variants[0].sku,
               allow_backorder: false,
               manage_inventory: true,
-              inventory_quantity: "100",
+              inventory_quantity: "10",
               variant_rank: "0",
               options: expect.arrayContaining([
                 expect.objectContaining({
                   id: expect.any(String),
-                  value: updateData.variants[0].options?.[0].value,
                 }),
               ]),
             }),
@@ -256,7 +252,6 @@ describe("ProductModuleService products", function () {
     })
 
     it("should emit events through event bus", async () => {
-      const eventBusSpy = jest.spyOn(EventBusService.prototype, "emit")
       const data = buildProductAndRelationsData({
         images,
         thumbnail: images[0],
@@ -270,11 +265,100 @@ describe("ProductModuleService products", function () {
 
       await module.update([updateData])
 
-      expect(eventBusSpy).toHaveBeenCalledTimes(1)
-      expect(eventBusSpy).toHaveBeenCalledWith([
+      expect(eventBusSpy).toHaveBeenCalledTimes(6)
+      expect(eventBusSpy).toHaveBeenNthCalledWith(1, [
+        {
+          eventName: "product-image.created",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "ProductImage",
+              action: "created",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(2, [
+        {
+          eventName: "product-tag.created",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "ProductTag",
+              action: "created",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(3, [
+        {
+          eventName: "product-type.created",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "ProductType",
+              action: "created",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(4, [
         {
           eventName: "product.updated",
-          data: { id: productOne.id },
+          body: {
+            metadata: {
+              service: "productService",
+              object: "Product",
+              action: "updated",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(5, [
+        {
+          eventName: "product-variant.created",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "ProductVariant",
+              action: "created",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(6, [
+        {
+          eventName: "product-variant.deleted",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "Product",
+              action: "deleted",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
         },
       ])
     })
@@ -558,15 +642,30 @@ describe("ProductModuleService products", function () {
       })
 
       const products = await module.create([data])
+      const [product] = await module.list(
+        { id: products[0].id },
+        {
+          relations: [
+            "options",
+            "options.values",
+            "variants",
+            "variants.options",
+            "variants.options.value",
+            "tags",
+            "type",
+            "categories",
+            "images",
+          ],
+        }
+      )
 
-      expect(products).toHaveLength(1)
-      expect(products[0].images).toHaveLength(1)
-      expect(products[0].options).toHaveLength(1)
-      expect(products[0].tags).toHaveLength(1)
-      expect(products[0].categories).toHaveLength(0)
-      expect(products[0].variants).toHaveLength(1)
+      expect(product.images).toHaveLength(1)
+      expect(product.options).toHaveLength(1)
+      expect(product.tags).toHaveLength(1)
+      expect(product.categories).toHaveLength(0)
+      expect(product.variants).toHaveLength(1)
 
-      expect(products[0]).toEqual(
+      expect(product).toEqual(
         expect.objectContaining({
           id: expect.any(String),
           title: data.title,
@@ -612,8 +711,6 @@ describe("ProductModuleService products", function () {
               sku: data.variants[0].sku,
               allow_backorder: false,
               manage_inventory: true,
-              inventory_quantity: 100,
-              variant_rank: 0,
               options: expect.arrayContaining([
                 expect.objectContaining({
                   id: expect.any(String),
@@ -627,7 +724,6 @@ describe("ProductModuleService products", function () {
     })
 
     it("should emit events through eventBus", async () => {
-      const eventBusSpy = jest.spyOn(EventBusService.prototype, "emit")
       const data = buildProductAndRelationsData({
         images,
         thumbnail: images[0],
@@ -635,11 +731,100 @@ describe("ProductModuleService products", function () {
 
       const products = await module.create([data])
 
-      expect(eventBusSpy).toHaveBeenCalledTimes(1)
-      expect(eventBusSpy).toHaveBeenCalledWith([
+      expect(eventBusSpy).toHaveBeenCalledTimes(6)
+      expect(eventBusSpy).toHaveBeenNthCalledWith(1, [
+        {
+          eventName: "product-image.created",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "ProductImage",
+              action: "created",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(2, [
+        {
+          eventName: "product-tag.created",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "ProductTag",
+              action: "created",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(3, [
+        {
+          eventName: "product-type.created",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "ProductType",
+              action: "created",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(4, [
         {
           eventName: "product.created",
-          data: { id: products[0].id },
+          body: {
+            metadata: {
+              service: "productService",
+              object: "Product",
+              action: "created",
+            },
+            data: {
+              id: products[0].id,
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(5, [
+        {
+          eventName: "product-option.created",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "ProductOption",
+              action: "created",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
+        },
+      ])
+
+      expect(eventBusSpy).toHaveBeenNthCalledWith(6, [
+        {
+          eventName: "product-variant.created",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "ProductVariant",
+              action: "created",
+            },
+            data: {
+              id: expect.any(String),
+            },
+          },
         },
       ])
     })
@@ -723,7 +908,6 @@ describe("ProductModuleService products", function () {
     })
 
     it("should emit events through eventBus", async () => {
-      const eventBusSpy = jest.spyOn(EventBusService.prototype, "emit")
       const data = buildProductAndRelationsData({
         images,
         thumbnail: images[0],
@@ -731,12 +915,23 @@ describe("ProductModuleService products", function () {
 
       const products = await module.create([data])
 
+      eventBusSpy.mockClear()
       await module.softDelete([products[0].id])
 
-      expect(eventBusSpy).toHaveBeenCalledWith([
+      expect(eventBusSpy).toHaveBeenCalledTimes(1)
+      expect(eventBusSpy).toHaveBeenNthCalledWith(1, [
         {
-          eventName: "product.created",
-          data: { id: products[0].id },
+          eventName: "product.deleted",
+          body: {
+            metadata: {
+              service: "productService",
+              object: "Product",
+              action: "deleted",
+            },
+            data: {
+              id: products[0].id,
+            },
+          },
         },
       ])
     })

@@ -4,8 +4,8 @@ import {
   MODULE_SCOPE,
 } from "@medusajs/types"
 
-import { MedusaModule } from "../../medusa-module"
 import { asValue } from "awilix"
+import { MedusaModule } from "../../medusa-module"
 
 const mockRegisterMedusaModule = jest.fn().mockImplementation(() => {
   return {

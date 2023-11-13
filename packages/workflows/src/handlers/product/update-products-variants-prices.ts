@@ -27,6 +27,10 @@ export async function updateProductsVariantsPrices({
   const productsHandleVariantsIndexPricesMap =
     data.productsHandleVariantsIndexPricesMap
 
+  if (!products?.length) {
+    return
+  }
+
   const productVariantService = container.resolve("productVariantService")
   const regionService = container.resolve("regionService")
   const featureFlagRouter = container.resolve("featureFlagRouter")

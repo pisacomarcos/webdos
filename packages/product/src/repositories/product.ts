@@ -18,8 +18,8 @@ import {
   ProductTypes,
   WithRequiredProperty,
 } from "@medusajs/types"
-import { SqlEntityManager } from "@mikro-orm/postgresql"
 import { DALUtils, isDefined, MedusaError, promiseAll } from "@medusajs/utils"
+import { SqlEntityManager } from "@mikro-orm/postgresql"
 
 import { ProductServiceTypes } from "../types/services"
 

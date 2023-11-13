@@ -20,6 +20,10 @@ export async function attachShippingProfileToProducts({
     data.productsHandleShippingProfileIdMap
   const products = data.products
 
+  if (!products?.length) {
+    return
+  }
+
   const shippingProfileService = container.resolve("shippingProfileService")
   const shippingProfileServiceTx =
     shippingProfileService.withTransaction(manager)

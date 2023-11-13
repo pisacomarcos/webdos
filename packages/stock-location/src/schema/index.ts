@@ -1,6 +1,7 @@
 export default `
 scalar DateTime
 scalar JSON
+
 type StockLocation {
   id: ID!
   created_at: DateTime!
@@ -11,6 +12,7 @@ type StockLocation {
   address: StockLocationAddress
   metadata: JSON
 }
+
 type StockLocationAddress {
   id: ID!
   created_at: DateTime!

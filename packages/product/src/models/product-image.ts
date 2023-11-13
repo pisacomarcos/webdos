@@ -5,6 +5,7 @@ import {
   Filter,
   Index,
   ManyToMany,
+  OnInit,
   OptionalProps,
   PrimaryKey,
   Property,
@@ -53,6 +54,11 @@ class ProductImage {
 
   @ManyToMany(() => Product, (product) => product.images)
   products = new Collection<Product>(this)
+
+  @OnInit()
+  onInit() {
+    this.id = generateEntityId(this.id, "img")
+  }
 
   @BeforeCreate()
   onCreate() {

@@ -2,7 +2,6 @@ import {
   ExternalModuleDeclaration,
   InternalModuleDeclaration,
   LoadedModule,
-  LoaderOptions,
   MedusaContainer,
   MODULE_RESOURCE_TYPE,
   MODULE_SCOPE,
@@ -10,6 +9,7 @@ import {
   ModuleJoinerConfig,
   ModuleServiceInitializeOptions,
   RemoteJoinerQuery,
+  RemoteQueryFunction,
 } from "@medusajs/types"
 import {
   ContainerRegistrationKeys,
@@ -40,6 +40,7 @@ export type RunMigrationFn = (
 
 export type MedusaModuleConfig = {
   [key: string | Modules]:
+    | string
     | boolean
     | Partial<InternalModuleDeclaration | ExternalModuleDeclaration>
 }
@@ -165,10 +166,7 @@ function registerCustomJoinerConfigs(servicesConfig: ModuleJoinerConfig[]) {
 export type MedusaAppOutput = {
   modules: Record<string, LoadedModule | LoadedModule[]>
   link: RemoteLink | undefined
-  query: (
-    query: string | RemoteJoinerQuery | object,
-    variables?: Record<string, unknown>
-  ) => Promise<any>
+  query: RemoteQueryFunction
   entitiesMap?: Record<string, any>
   notFound?: Record<string, Record<string, string>>
   runMigrations: RunMigrationFn
@@ -199,17 +197,7 @@ export async function MedusaApp(
   } = {
     injectedDependencies: {},
   }
-): Promise<{
-  modules: Record<string, LoadedModule | LoadedModule[]>
-  link: RemoteLink | undefined
-  query: (
-    query: string | RemoteJoinerQuery | object,
-    variables?: Record<string, unknown>
-  ) => Promise<any>
-  entitiesMap?: Record<string, any>
-  notFound?: Record<string, Record<string, string>>
-  runMigrations: RunMigrationFn
-}> {
+): Promise<MedusaAppOutput> {
   const sharedContainer_ = createMedusaContainer({}, sharedContainer)
 
   const modules: MedusaModuleConfig =
@@ -308,12 +296,16 @@ export async function MedusaApp(
       }))
   }
 
-  return {
-    modules: allModules,
-    link: remoteLink,
-    query,
-    entitiesMap: schema.getTypeMap(),
-    notFound,
-    runMigrations,
+  try {
+    return {
+      modules: allModules,
+      link: remoteLink,
+      query,
+      entitiesMap: schema.getTypeMap(),
+      notFound,
+      runMigrations,
+    }
+  } finally {
+    MedusaModule.onApplicationStart()
   }
 }

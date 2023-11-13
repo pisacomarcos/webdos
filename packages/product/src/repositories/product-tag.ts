@@ -1,18 +1,18 @@
 import {
-  FilterQuery as MikroFilterQuery,
-  FindOptions as MikroOptions,
-  LoadStrategy,
-} from "@mikro-orm/core"
-import { ProductTag } from "@models"
-import {
   Context,
   CreateProductTagDTO,
   DAL,
   UpdateProductTagDTO,
   UpsertProductTagDTO,
 } from "@medusajs/types"
-import { SqlEntityManager } from "@mikro-orm/postgresql"
 import { DALUtils, MedusaError } from "@medusajs/utils"
+import {
+  FilterQuery as MikroFilterQuery,
+  FindOptions as MikroOptions,
+  LoadStrategy,
+} from "@mikro-orm/core"
+import { SqlEntityManager } from "@mikro-orm/postgresql"
+import { ProductTag } from "@models"
 
 export class ProductTagRepository extends DALUtils.MikroOrmBaseRepository {
   protected readonly manager_: SqlEntityManager
@@ -121,7 +121,7 @@ export class ProductTagRepository extends DALUtils.MikroOrmBaseRepository {
   async upsert(
     tags: UpsertProductTagDTO[],
     context: Context = {}
-  ): Promise<ProductTag[]> {
+  ): Promise<[ProductTag[], ProductTag[], ProductTag[]]> {
     const manager = this.getActiveManager<SqlEntityManager>(context)
     const tagsValues = tags.map((tag) => tag.value)
     const existingTags = await this.find(
@@ -154,9 +154,11 @@ export class ProductTagRepository extends DALUtils.MikroOrmBaseRepository {
       }
     })
 
+    const newTags: ProductTag[] = []
     if (tagsToCreate.length) {
       manager.persist(tagsToCreate)
       upsertedTags.push(...tagsToCreate)
+      newTags.push(...tagsToCreate)
     }
 
     if (tagsToUpdate.length) {
@@ -164,7 +166,7 @@ export class ProductTagRepository extends DALUtils.MikroOrmBaseRepository {
       upsertedTags.push(...tagsToUpdate)
     }
 
-    return upsertedTags
+    return [upsertedTags, existingTags, newTags]
   }
 
   async delete(ids: string[], context: Context = {}): Promise<void> {

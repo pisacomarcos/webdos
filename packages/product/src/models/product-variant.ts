@@ -8,6 +8,7 @@ import {
   Index,
   ManyToOne,
   OneToMany,
+  OnInit,
   OptionalProps,
   PrimaryKey,
   Property,
@@ -138,6 +139,11 @@ class ProductVariant {
     cascade: [Cascade.PERSIST, Cascade.REMOVE, "soft-remove" as any],
   })
   options = new Collection<ProductOptionValue>(this)
+
+  @OnInit()
+  onInit() {
+    this.id = generateEntityId(this.id, "variant")
+  }
 
   @BeforeCreate()
   onCreate() {

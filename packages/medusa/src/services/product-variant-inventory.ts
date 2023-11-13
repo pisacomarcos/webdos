@@ -5,11 +5,19 @@ import {
   InventoryItemDTO,
   InventoryLevelDTO,
   IStockLocationService,
+  RemoteQueryFunction,
   ReservationItemDTO,
   ReserveQuantityContext,
 } from "@medusajs/types"
 import { LineItem, Product, ProductVariant } from "../models"
-import { isDefined, MedusaError, promiseAll } from "@medusajs/utils"
+import {
+  buildEventMessages,
+  FlagRouter,
+  isDefined,
+  MedusaError,
+  promiseAll,
+  remoteQueryObjectFromString,
+} from "@medusajs/utils"
 import { PricedProduct, PricedVariant } from "../types/pricing"
 
 import { ProductVariantInventoryItem } from "../models/product-variant-inventory-item"
@@ -18,6 +26,7 @@ import SalesChannelInventoryService from "./sales-channel-inventory"
 import SalesChannelLocationService from "./sales-channel-location"
 import { TransactionBaseService } from "../interfaces"
 import { getSetDifference } from "../utils/diff-set"
+import IsolateProductDomainFeatureFlag from "../loaders/feature-flags/isolate-product-domain"
 
 type InjectedDependencies = {
   manager: EntityManager
@@ -27,6 +36,8 @@ type InjectedDependencies = {
   stockLocationService: IStockLocationService
   inventoryService: IInventoryService
   eventBusService: IEventBusService
+  featureFlagRouter: FlagRouter
+  remoteQuery: RemoteQueryFunction
 }
 
 type AvailabilityContext = {
@@ -42,28 +53,33 @@ class ProductVariantInventoryService extends TransactionBaseService {
   protected readonly salesChannelInventoryService_: SalesChannelInventoryService
   protected readonly productVariantService_: ProductVariantService
   protected readonly eventBusService_: IEventBusService
+  protected readonly featureFlagRouter_: FlagRouter
+  protected readonly remoteQuery_: RemoteQueryFunction
 
-  protected get inventoryService_(): IInventoryService {
-    return this.__container__.inventoryService
-  }
-
-  protected get stockLocationService_(): IStockLocationService {
-    return this.__container__.stockLocationService
-  }
+  protected inventoryService_: IInventoryService
+  protected stockLocationService_: IStockLocationService
 
   constructor({
     salesChannelLocationService,
     salesChannelInventoryService,
     productVariantService,
     eventBusService,
+    featureFlagRouter,
+    remoteQuery,
+    inventoryService,
+    stockLocationService,
   }: InjectedDependencies) {
     // eslint-disable-next-line prefer-rest-params
     super(arguments[0])
 
+    this.inventoryService_ = inventoryService
+    this.stockLocationService_ = stockLocationService
     this.salesChannelLocationService_ = salesChannelLocationService
     this.salesChannelInventoryService_ = salesChannelInventoryService
     this.productVariantService_ = productVariantService
     this.eventBusService_ = eventBusService
+    this.featureFlagRouter_ = featureFlagRouter
+    this.remoteQuery_ = remoteQuery
   }
 
   /**
@@ -301,16 +317,33 @@ class ProductVariantInventoryService extends TransactionBaseService {
     }
 
     // Verify that variant exists
-    const variants = await this.productVariantService_
-      .withTransaction(this.activeManager_)
-      .list(
-        {
-          id: data.map((d) => d.variantId),
-        },
-        {
-          select: ["id"],
-        }
+    let variants
+    if (
+      this.featureFlagRouter_.isFeatureEnabled(
+        IsolateProductDomainFeatureFlag.key
       )
+    ) {
+      variants = await this.remoteQuery_(
+        remoteQueryObjectFromString({
+          entryPoint: "variants",
+          variables: {
+            id: data.map((d) => d.variantId),
+          },
+          fields: ["id"],
+        })
+      )
+    } else {
+      variants = await this.productVariantService_
+        .withTransaction(this.activeManager_)
+        .list(
+          {
+            id: data.map((d) => d.variantId),
+          },
+          {
+            select: ["id"],
+          }
+        )
+    }
 
     const foundVariantIds = new Set(variants.map((v) => v.id))
     const requestedVariantIds = new Set(data.map((v) => v.variantId))
@@ -398,7 +431,24 @@ class ProductVariantInventoryService extends TransactionBaseService {
       ): tc is ProductVariantInventoryItem => !!tc
     )
 
-    return await variantInventoryRepo.save(toCreate)
+    const createdVariantInventoryItems = await variantInventoryRepo.save(
+      toCreate
+    )
+
+    await this.eventBusService_.emit(
+      buildEventMessages({
+        // TODO: align the event entity format later
+        eventName: "LinkProductVariantInventoryItem.attached",
+        data: createdVariantInventoryItems.map((v) => ({ id: v.id })),
+        metadata: {
+          object: "LinkProductVariantInventoryItem",
+          service: "product-variant-inventory",
+          action: "attached",
+        },
+      })
+    )
+
+    return createdVariantInventoryItems
   }
 
   /**

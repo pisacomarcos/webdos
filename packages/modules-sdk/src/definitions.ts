@@ -11,6 +11,7 @@ export enum Modules {
   CACHE = "cacheService",
   PRODUCT = "productService",
   PRICING = "pricingService",
+  SEARCH = "searchService",
 }
 
 export enum ModuleRegistrationName {
@@ -20,6 +21,7 @@ export enum ModuleRegistrationName {
   CACHE = "cacheService",
   PRODUCT = "productModuleService",
   PRICING = "pricingModuleService",
+  SEARCH = "searchModuleService",
 }
 
 export const MODULE_PACKAGE_NAMES = {
@@ -29,6 +31,7 @@ export const MODULE_PACKAGE_NAMES = {
   [Modules.INVENTORY]: "@medusajs/inventory",
   [Modules.CACHE]: "@medusajs/cache-inmemory",
   [Modules.PRICING]: "@medusajs/pricing",
+  [Modules.SEARCH]: "@medusajs/search",
 }
 
 export const ModulesDefinition: { [key: string | Modules]: ModuleDefinition } =
@@ -113,6 +116,20 @@ export const ModulesDefinition: { [key: string | Modules]: ModuleDefinition } =
       canOverride: true,
       isQueryable: true,
       dependencies: ["logger"],
+      defaultModuleDeclaration: {
+        scope: MODULE_SCOPE.INTERNAL,
+        resources: MODULE_RESOURCE_TYPE.SHARED,
+      },
+    },
+    [Modules.SEARCH]: {
+      key: Modules.SEARCH,
+      registrationName: ModuleRegistrationName.SEARCH,
+      defaultPackage: false,
+      label: "SearchModuleService",
+      isRequired: false,
+      canOverride: true,
+      isQueryable: true,
+      dependencies: ["logger", ModuleRegistrationName.EVENT_BUS, "remoteQuery"],
       defaultModuleDeclaration: {
         scope: MODULE_SCOPE.INTERNAL,
         resources: MODULE_RESOURCE_TYPE.SHARED,

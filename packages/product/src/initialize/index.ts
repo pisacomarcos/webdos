@@ -7,8 +7,8 @@ import {
 } from "@medusajs/modules-sdk"
 import { IProductModuleService, ModulesSdkTypes } from "@medusajs/types"
 
-import { InitializeModuleInjectableDependencies } from "../types"
 import { moduleDefinition } from "../module-definition"
+import { InitializeModuleInjectableDependencies } from "../types"
 
 export const initialize = async (
   options?:

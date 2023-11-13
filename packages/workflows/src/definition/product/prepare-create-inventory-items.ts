@@ -12,6 +12,15 @@ export async function prepareCreateInventoryItems({
 }: WorkflowArguments<{
   products: ObjectWithVariant[]
 }>) {
+  if (!data.products?.length) {
+    return {
+      alias: prepareCreateInventoryItems.aliases.output,
+      value: {
+        inventoryItems: [],
+      },
+    }
+  }
+
   const taggedVariants = data.products.reduce<AssociationTaggedVariant[]>(
     (acc, product: ObjectWithVariant) => {
       const cleanVariants = product.variants.reduce<AssociationTaggedVariant[]>(

@@ -4,6 +4,7 @@ import {
   Filter,
   Index,
   ManyToOne,
+  OnInit,
   OptionalProps,
   PrimaryKey,
   Property,
@@ -71,6 +72,11 @@ class ProductOptionValue {
   @Index({ name: "IDX_product_option_value_deleted_at" })
   @Property({ columnType: "timestamptz", nullable: true })
   deleted_at?: Date
+
+  @OnInit()
+  onInit() {
+    this.id = generateEntityId(this.id, "optval")
+  }
 
   @BeforeCreate()
   beforeCreate() {

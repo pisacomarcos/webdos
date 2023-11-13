@@ -5,6 +5,7 @@ import {
   Filter,
   Index,
   OneToMany,
+  OnInit,
   OptionalProps,
   PrimaryKey,
   Property,
@@ -60,6 +61,11 @@ class ProductCollection {
   @Index({ name: "IDX_product_collection_deleted_at" })
   @Property({ columnType: "timestamptz", nullable: true })
   deleted_at?: Date
+
+  @OnInit()
+  onInit() {
+    this.id = generateEntityId(this.id, "pcol")
+  }
 
   @BeforeCreate()
   onCreate() {

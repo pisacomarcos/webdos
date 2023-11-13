@@ -160,6 +160,7 @@ export default async ({
   container.register({
     [ContainerRegistrationKeys.MANAGER]: asValue(dataSource.manager),
   })
+  container.register(ContainerRegistrationKeys.REMOTE_QUERY, asValue(undefined))
 
   container.register("remoteQuery", asValue(null)) // ensure remoteQuery is always registered
 
