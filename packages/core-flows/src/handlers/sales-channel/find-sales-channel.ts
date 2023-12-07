@@ -22,14 +22,18 @@ enum Aliases {
 
 export async function findSalesChannel({
   container,
+  context,
   data,
 }: WorkflowArguments<HandlerInputData>): Promise<AttachSalesChannelDTO> {
+  const { manager } = context
   const salesChannelService = container.resolve("salesChannelService")
+  const salesChannelServiceTx = salesChannelService.withTransaction(manager)
   const storeService = container.resolve("storeService")
+  const storeServiceTx = storeService.withTransaction(manager)
 
   let salesChannelId = data[Aliases.SalesChannel].sales_channel_id
   let salesChannel
-  const salesChannelDTO: AttachSalesChannelDTO = {}
+  
   const publishableApiKeyScopes =
     data[Aliases.SalesChannel].publishableApiKeyScopes || {}
 
@@ -50,10 +54,10 @@ export async function findSalesChannel({
   }
 
   if (isDefined(salesChannelId)) {
-    salesChannel = await salesChannelService.retrieve(salesChannelId)
+    salesChannel = await salesChannelServiceTx.retrieve(salesChannelId)
   } else {
     salesChannel = (
-      await storeService.retrieve({
+      await storeServiceTx.retrieve({
         relations: ["default_sales_channel"],
       })
     ).default_sales_channel
@@ -66,9 +70,7 @@ export async function findSalesChannel({
     )
   }
 
-  salesChannelDTO.sales_channel_id = salesChannel?.id
-
-  return salesChannelDTO
+  return { sales_channel_id: salesChannel?.id}
 }
 
 findSalesChannel.aliases = Aliases

@@ -1,23 +1,13 @@
-import { MedusaError } from "medusa-core-utils"
-import { EntityManager, In } from "typeorm"
-import { DeepPartial } from "typeorm/common/DeepPartial"
-
+import { DeleteResult, EntityManager, In } from "typeorm"
+import { FindConfig, Selector } from "../types/common"
 import { FlagRouter, MedusaV2Flag } from "@medusajs/utils"
-import { TransactionBaseService } from "../interfaces"
-import TaxInclusivePricingFeatureFlag from "../loaders/feature-flags/tax-inclusive-pricing"
+import { GenerateInputData, GenerateLineItemContext } from "../types/line-item"
 import {
   LineItem,
   LineItemAdjustment,
   LineItemTaxLine,
   ProductVariant,
 } from "../models"
-import { CartRepository } from "../repositories/cart"
-import { LineItemRepository } from "../repositories/line-item"
-import { LineItemTaxLineRepository } from "../repositories/line-item-tax-line"
-import { FindConfig, Selector } from "../types/common"
-import { GenerateInputData, GenerateLineItemContext } from "../types/line-item"
-import { ProductVariantPricing } from "../types/pricing"
-import { buildQuery, isString, setMetadata } from "../utils"
 import {
   PricingService,
   ProductService,
@@ -25,7 +15,17 @@ import {
   RegionService,
   TaxProviderService,
 } from "./index"
+import { buildQuery, isString, setMetadata } from "../utils"
+
+import { CartRepository } from "../repositories/cart"
+import { DeepPartial } from "typeorm/common/DeepPartial"
 import LineItemAdjustmentService from "./line-item-adjustment"
+import { LineItemRepository } from "../repositories/line-item"
+import { LineItemTaxLineRepository } from "../repositories/line-item-tax-line"
+import { MedusaError } from "medusa-core-utils"
+import { ProductVariantPricing } from "../types/pricing"
+import TaxInclusivePricingFeatureFlag from "../loaders/feature-flags/tax-inclusive-pricing"
+import { TransactionBaseService } from "../interfaces"
 
 type InjectedDependencies = {
   manager: EntityManager
@@ -486,18 +486,15 @@ class LineItemService extends TransactionBaseService {
    * @param id - the id of the line item to delete
    * @return the result of the delete operation
    */
-  async delete(id: string): Promise<LineItem | undefined | null> {
+  async delete(id: string | string[]): Promise<DeleteResult> {
     return await this.atomicPhase_(
       async (transactionManager: EntityManager) => {
         const lineItemRepository = transactionManager.withRepository(
           this.lineItemRepository_
         )
 
-        return await lineItemRepository
-          .findOne({ where: { id } })
-          .then(
-            async (lineItem) => lineItem && lineItemRepository.remove(lineItem)
-          )
+        const ids = Array.isArray(id) ? id : [id]
+        return await lineItemRepository.delete({ id: In(ids) })
       }
     )
   }
@@ -508,7 +505,7 @@ class LineItemService extends TransactionBaseService {
    * @param id - the id of the line item to delete
    * @return the result of the delete operation
    */
-  async deleteWithTaxLines(id: string): Promise<LineItem | undefined | null> {
+  async deleteWithTaxLines(id: string): Promise<DeleteResult> {
     return await this.atomicPhase_(
       async (transactionManager: EntityManager) => {
         await this.taxProviderService_

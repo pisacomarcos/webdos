@@ -25,9 +25,13 @@ enum Aliases {
 
 export async function findOrCreateAddresses({
   container,
+  context,
   data,
 }: WorkflowArguments<HandlerInputData>): Promise<AddressesDTO> {
+  const { manager } = context
   const regionService = container.resolve("regionService")
+  const regionServiceTx = regionService.withTransaction(manager)
+
   const addressRepository = container.resolve("addressRepository")
 
   const shippingAddress = data[Aliases.Addresses].shipping_address
@@ -36,7 +40,7 @@ export async function findOrCreateAddresses({
   const billingAddressId = data[Aliases.Addresses].billing_address_id
   const addressesDTO: AddressesDTO = {}
 
-  const region = await regionService.retrieve(data[Aliases.Region].region_id, {
+  const region = await regionServiceTx.retrieve(data[Aliases.Region].region_id, {
     relations: ["countries"],
   })
 
@@ -44,9 +48,9 @@ export async function findOrCreateAddresses({
 
   if (!shippingAddress && !shippingAddressId) {
     if (region.countries.length === 1) {
-      const shippingAddress = addressRepository.create({
+      const shippingAddress = await addressRepository.save(addressRepository.create({
         country_code: regionCountries[0],
-      })
+      }))
 
       addressesDTO.shipping_address_id = shippingAddress?.id
     }
@@ -61,7 +65,7 @@ export async function findOrCreateAddresses({
     }
 
     if (shippingAddressId) {
-      const address = await regionService.findOne({
+      const address = await regionServiceTx.findOne({
         where: { id: shippingAddressId },
       })
 
@@ -89,7 +93,7 @@ export async function findOrCreateAddresses({
   }
 
   if (billingAddressId) {
-    const address = await regionService.findOne({
+    const address = await regionServiceTx.findOne({
       where: { id: billingAddressId },
     })
 

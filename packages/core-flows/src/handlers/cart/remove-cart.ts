@@ -16,13 +16,11 @@ export async function removeCart({
   data,
 }: WorkflowArguments<HandlerInputData>): Promise<void> {
   const { manager } = context
-
   const cartService = container.resolve("cartService")
 
-  const cartServiceTx = cartService.withTransaction(manager)
   const cart = data[Aliases.Cart]
 
-  await cartServiceTx.delete(cart.id)
+  await cartService.withTransaction(manager).delete(cart.id)
 }
 
 removeCart.aliases = Aliases

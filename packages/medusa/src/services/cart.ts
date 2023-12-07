@@ -1,12 +1,31 @@
 import {
-  FlagRouter,
-  isDefined,
-  MedusaError,
-  MedusaV2Flag,
-  promiseAll,
-} from "@medusajs/utils"
-import { isEmpty, isEqual } from "lodash"
-import { DeepPartial, EntityManager, In, IsNull, Not } from "typeorm"
+  Address,
+  Cart,
+  Customer,
+  CustomShippingOption,
+  Discount,
+  DiscountRule,
+  DiscountRuleType,
+  LineItem,
+  PaymentSession,
+  PaymentSessionStatus,
+  SalesChannel,
+  ShippingMethod,
+} from "../models"
+import {
+  AddressPayload,
+  FindConfig,
+  TotalField,
+  WithRequiredProperty,
+} from "../types/common"
+import {
+  CartCreateProps,
+  CartUpdateProps,
+  FilterableCartProps,
+  isCart,
+  LineItemUpdate,
+  LineItemValidateData,
+} from "../types/cart"
 import {
   CustomerService,
   CustomShippingOptionService,
@@ -29,45 +48,21 @@ import {
   TaxProviderService,
   TotalsService,
 } from "."
+import { DeepPartial, EntityManager, In, IsNull, Not } from "typeorm"
 import { IPriceSelectionStrategy, TransactionBaseService } from "../interfaces"
-import SalesChannelFeatureFlag from "../loaders/feature-flags/sales-channels"
-import {
-  Address,
-  Cart,
-  Customer,
-  CustomShippingOption,
-  Discount,
-  DiscountRule,
-  DiscountRuleType,
-  LineItem,
-  PaymentSession,
-  PaymentSessionStatus,
-  SalesChannel,
-  ShippingMethod,
-} from "../models"
-import {
-  CartCreateProps,
-  CartUpdateProps,
-  FilterableCartProps,
-  isCart,
-  LineItemUpdate,
-  LineItemValidateData,
-} from "../types/cart"
-import {
-  AddressPayload,
-  FindConfig,
-  TotalField,
-  WithRequiredProperty,
-} from "../types/common"
+import { isDefined, MedusaError } from "medusa-core-utils"
 import { buildQuery, isString, setMetadata } from "../utils"
+import { isEmpty, isEqual } from "lodash"
 
 import { AddressRepository } from "../repositories/address"
 import { CartRepository } from "../repositories/cart"
+import { FlagRouter, promiseAll, validateEmail } from "@medusajs/utils"
 import { LineItemRepository } from "../repositories/line-item"
-import { PaymentSessionRepository } from "../repositories/payment-session"
-import { ShippingMethodRepository } from "../repositories/shipping-method"
+import MedusaV2Flag from "../loaders/feature-flags/medusa-v2"
 import { PaymentSessionInput } from "../types/payment"
-import { validateEmail } from "../utils/is-email"
+import { PaymentSessionRepository } from "../repositories/payment-session"
+import SalesChannelFeatureFlag from "../loaders/feature-flags/sales-channels"
+import { ShippingMethodRepository } from "../repositories/shipping-method"
 
 type InjectedDependencies = {
   manager: EntityManager
@@ -477,6 +472,19 @@ class CartService extends TransactionBaseService {
           .emit(CartService.Events.CREATED, {
             id: cart.id,
           })
+        return cart
+      }
+    )
+  }
+
+  async createCartFromData(data: CartCreateProps): Promise<Cart> {
+    return await this.atomicPhase_(
+      async (transactionManager: EntityManager) => {
+        const cartRepo = transactionManager.withRepository(this.cartRepository_)
+
+        const createdCart = cartRepo.create(data)
+        const cart = await cartRepo.save(createdCart)
+
         return cart
       }
     )
@@ -984,6 +992,15 @@ class CartService extends TransactionBaseService {
           .emit(CartService.Events.UPDATED, { id: cart.id })
       }
     )
+  }
+
+  async refreshAdjustments(cartOrId: Cart | string): Promise<void> {
+    const cart =
+      typeof cartOrId === "object" ? cartOrId : await this.retrieve(cartOrId)
+
+    await this.refreshAdjustments_(cart)
+
+    await this.eventBus_.emit(CartService.Events.UPDATED, { id: cart.id })
   }
 
   /**

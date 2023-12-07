@@ -4,16 +4,29 @@ import {
   ProductVariantMoneyAmount,
   Region,
 } from "@medusajs/medusa"
-import path from "path"
-import { startBootstrapApp } from "../../../../environment-helpers/bootstrap-app"
-import { useApi } from "../../../../environment-helpers/use-api"
 import { initDb, useDb } from "../../../../environment-helpers/use-db"
-import { simpleProductFactory } from "../../../../factories"
+import { setPort, useApi } from "../../../../environment-helpers/use-api"
+import {
+  simpleProductFactory,
+  simpleSalesChannelFactory,
+} from "../../../../factories"
+
+import { AxiosInstance } from "axios"
+import { Customer } from "@medusajs/medusa"
+import { bootstrapApp } from "../../../../environment-helpers/bootstrap-app"
+import path from "path"
+import setupServer from "../../../../environment-helpers/setup-server"
+import { startBootstrapApp } from "../../../../environment-helpers/bootstrap-app"
 
 jest.setTimeout(30000)
 
+const getApi = () => {
+  return useApi() as unknown as AxiosInstance
+}
+
 describe("/store/carts", () => {
   let dbConnection
+  let appContainer
   let shutdownServer
 
   const doAfterEach = async () => {
@@ -45,12 +58,39 @@ describe("/store/carts", () => {
         currency_code: "usd",
         tax_rate: 0,
       })
+      await manager.insert(Region, {
+        id: "region-1",
+        name: "Test Region",
+        currency_code: "dkk",
+        tax_rate: 0,
+      })
 
       await manager.query(
         `UPDATE "country"
          SET region_id='region'
          WHERE iso_2 = 'us'`
       )
+
+      await manager.query(
+        `UPDATE "country"
+         SET region_id='region-1'
+         WHERE iso_2 = 'dk'`
+      )
+      await manager.query(
+        `UPDATE "country"
+         SET region_id='region-1'
+         WHERE iso_2 = 'uk'`
+      )
+
+      await dbConnection.manager.insert(Customer, {
+        id: "test_customer",
+        first_name: "john",
+        last_name: "doe",
+        email: "john@doe.com",
+        password_hash:
+          "c2NyeXB0AAEAAAABAAAAAVMdaddoGjwU1TafDLLlBKnOTQga7P2dbrfgf3fB+rCD/cJOMuGzAvRdKutbYkVpuJWTU39P7OpuWNkUVoEETOVLMJafbI8qs8Qx/7jMQXkN", // password matching "test"
+        has_account: true,
+      })
 
       prod1 = await simpleProductFactory(dbConnection, {
         id: "test-product",
@@ -73,7 +113,7 @@ describe("/store/carts", () => {
     })
 
     it("should create a cart", async () => {
-      const api = useApi()
+      const api = getApi()
       const response = await api.post("/store/carts")
 
       expect(response.status).toEqual(200)
@@ -83,12 +123,11 @@ describe("/store/carts", () => {
     })
 
     it("should fail to create a cart when no region exist", async () => {
-      const api = useApi()
+      const api = getApi()
 
       await dbConnection.manager.query(
         `UPDATE "country"
-         SET region_id=null
-         WHERE iso_2 = 'us'`
+         SET region_id=null`
       )
 
       await dbConnection.manager.query(`DELETE from region`)
@@ -137,20 +176,18 @@ describe("/store/carts", () => {
 
       const api = useApi()
 
-      const response = await api
-        .post("/store/carts", {
-          items: [
-            {
-              variant_id: prod1.variants[0].id,
-              quantity: 1,
-            },
-            {
-              variant_id: prodSale.variants[0].id,
-              quantity: 2,
-            },
-          ],
-        })
-        .catch((err) => console.log(err))
+      const response = await api.post("/store/carts", {
+        items: [
+          {
+            variant_id: prod1.variants[0].id,
+            quantity: 1,
+          },
+          {
+            variant_id: prodSale.variants[0].id,
+            quantity: 2,
+          },
+        ],
+      })
 
       response.data.cart.items.sort((a, b) => a.quantity - b.quantity)
 
@@ -174,21 +211,116 @@ describe("/store/carts", () => {
       expect(getRes.status).toEqual(200)
     })
 
-    it("should create a cart with country", async () => {
-      const api = useApi()
+    it("should create a cart with a customer", async () => {
+      const api = getApi()
+
+      const authResponse = await api.post("/store/auth", {
+        email: "john@doe.com",
+        password: "test",
+      })
+
+      const [authCookie] = authResponse.headers["set-cookie"][0].split(";")
+
+      const response = await api.post(
+        "/store/carts",
+        {},
+        {
+          headers: {
+            Cookie: authCookie,
+          },
+        }
+      )
+
+      expect(response.status).toEqual(200)
+      expect(response.data.cart.customer_id).toEqual(
+        authResponse.data.customer.id
+      )
+      expect(response.data.cart.email).toEqual("john@doe.com")
+    })
+
+    it("should create a cart with country given by country_code", async () => {
+      const api = getApi()
       const response = await api.post("/store/carts", {
-        country_code: "us",
+        country_code: "dk",
+        region_id: "region-1",
       })
 
       expect(response.status).toEqual(200)
-      expect(response.data.cart.shipping_address.country_code).toEqual("us")
+      expect(response.data.cart.shipping_address.country_code).toEqual("dk")
 
       const getRes = await api.post(`/store/carts/${response.data.cart.id}`)
       expect(getRes.status).toEqual(200)
     })
 
+    it("should validate items added to a cart on creation", async () => {
+      const api = getApi()
+
+      const prod = await simpleProductFactory(dbConnection, {
+        sales_channels: [{ name: "test" }],
+      })
+
+      const {response } = await api
+        .post("/store/carts", {
+          items: [
+            {
+              variant_id: prod!.variants[0].id,
+              quantity: 1,
+            },
+          ],
+        })
+        .catch((err) => err)
+
+      expect(response.status).toEqual(400)
+      expect(response.data.message).toEqual(
+        `The products [${
+          prod!.title
+        }] must belong to the sales channel on which the cart has been created.`
+      )
+    })
+
+    it("should validate item quantities on cart creation", async () => {
+      const api = getApi()
+      const inventoryService = appContainer.resolve("inventoryService")
+      const prodVarInventoryService = appContainer.resolve(
+        "productVariantInventoryService"
+      )
+      
+      await simpleProductFactory(dbConnection, {
+        variants: [
+          {
+            manage_inventory: true,
+            allow_backorder: false,
+            inventory_quantity: 0,
+            id: "test-variant-without-quantity",
+          },
+        ],
+      })
+
+      const invItem = await inventoryService.createInventoryItem({
+        sku: "test-sku",
+      })
+
+      await prodVarInventoryService.attachInventoryItem("test-variant-without-quantity", invItem.id)
+
+      const { response } = await api
+        .post("/store/carts", {
+          items: [
+            {
+              variant_id: "test-variant-without-quantity",
+              quantity: 1,
+            },
+          ],
+        })
+        .catch((err) => err)
+
+      expect(response.status).toEqual(400)
+      expect(response.data.message).toEqual(
+        `Variant with id: test-variant-without-quantity does not have the required inventory.` 
+      )
+    })
+
     it("should create a cart with context", async () => {
-      const api = useApi()
+      const api = getApi()
 
       const response = await api.post("/store/carts", {
         context: {

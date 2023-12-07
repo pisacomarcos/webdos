@@ -1,11 +1,4 @@
 import {
-  TransactionStepsDefinition,
-  WorkflowManager,
-} from "@medusajs/orchestration"
-import { CartWorkflow } from "@medusajs/types"
-
-import { Workflows } from "../../definitions"
-import {
   AddressHandlers,
   CartHandlers,
   CommonHandlers,
@@ -13,69 +6,120 @@ import {
   RegionHandlers,
   SalesChannelHandlers,
 } from "../../handlers"
+import {
+  TransactionStepsDefinition,
+  WorkflowManager,
+} from "@medusajs/orchestration"
 import { exportWorkflow, pipe } from "@medusajs/workflows-sdk"
 
+import { CartWorkflow } from "@medusajs/types"
+import { Workflows } from "../../definitions"
+
 enum CreateCartActions {
-  setContext = "setContext",
   attachLineItems = "attachLineItems",
   findRegion = "findRegion",
   findSalesChannel = "findSalesChannel",
   createCart = "createCart",
   findOrCreateAddresses = "findOrCreateAddresses",
   findOrCreateCustomer = "findOrCreateCustomer",
+  prepareCartData = "prepareCartData",
   removeCart = "removeCart",
   removeAddresses = "removeAddresses",
+  setContext = "setContext",
+  generateLineItems = "generateLineItems",
+  validateLineItemsForCart = "validateLineItemsForCart",
+  confirmLineItemQuantities = "confirmLineItemQuantities",
+  createLineItems = "createLineItems",
+  refreshAdjustments = "refreshAdjustments",
 }
 
-const workflowAlias = "cart"
-const getWorkflowInput = (alias = workflowAlias) => ({
-  inputAlias: workflowAlias,
-  invoke: {
-    from: workflowAlias,
-    alias,
-  },
-})
-
 const workflowSteps: TransactionStepsDefinition = {
-  next: [
-    {
-      action: CreateCartActions.findOrCreateCustomer,
-      noCompensation: true,
-    },
-    {
-      action: CreateCartActions.findSalesChannel,
-      noCompensation: true,
-    },
-    {
-      action: CreateCartActions.setContext,
-      noCompensation: true,
-    },
-    {
-      action: CreateCartActions.findRegion,
-      noCompensation: true,
-      next: {
-        action: CreateCartActions.findOrCreateAddresses,
+  next: {
+    action: CreateCartActions.prepareCartData,
+    noCompensation: true,
+    saveResponse: true,
+    next: [
+      {
+        action: CreateCartActions.findOrCreateCustomer,
+        saveResponse: true,
         noCompensation: true,
+      },
+      {
+        action: CreateCartActions.findSalesChannel,
+        saveResponse: true,
+        noCompensation: true,
+      },
+      {
+        action: CreateCartActions.setContext,
+        saveResponse: true,
+        noCompensation: true,
+      },
+      {
+        action: CreateCartActions.findRegion,
+        noCompensation: true,
+        saveResponse: true,
         next: {
-          action: CreateCartActions.createCart,
+          action: CreateCartActions.findOrCreateAddresses,
+          noCompensation: true,
           next: {
-            action: CreateCartActions.attachLineItems,
-            noCompensation: true,
+            action: CreateCartActions.createCart,
+            saveResponse: true,
+            next: {
+              action: CreateCartActions.generateLineItems,
+              noCompensation: true,
+              saveResponse: true,
+              next: {
+                action: CreateCartActions.validateLineItemsForCart,
+                noCompensation: true,
+                next: {
+                  action: CreateCartActions.confirmLineItemQuantities,
+                  noCompensation: true,
+                  next: {
+                    action: CreateCartActions.createLineItems,
+                    saveResponse: true,
+                    next: {
+                      action: CreateCartActions.refreshAdjustments,
+                      noCompensation: true,
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
-    },
-  ],
+    ],
+  },
 }
 
 const handlers = new Map([
   [
+    CreateCartActions.prepareCartData,
+    {
+      invoke: pipe(
+        {
+          merge: true,
+          inputAlias: CreateCartActions.prepareCartData,
+          invoke: {
+            from: CreateCartActions.prepareCartData,
+          },
+        },
+        CartHandlers.createCartPrepareData
+      ),
+    },
+  ],
+  [
     CreateCartActions.findOrCreateCustomer,
     {
       invoke: pipe(
-        getWorkflowInput(
-          CustomerHandlers.findOrCreateCustomer.aliases.Customer
-        ),
+        {
+          invoke: [
+            {
+              from: CreateCartActions.prepareCartData,
+              alias: CustomerHandlers.findOrCreateCustomer.aliases.Customer,
+            },
+          ],
+        },
         CustomerHandlers.findOrCreateCustomer
       ),
     },
@@ -84,9 +128,12 @@ const handlers = new Map([
     CreateCartActions.findSalesChannel,
     {
       invoke: pipe(
-        getWorkflowInput(
-          SalesChannelHandlers.findSalesChannel.aliases.SalesChannel
-        ),
+        {
+          invoke: {
+            from: CreateCartActions.prepareCartData,
+            alias: SalesChannelHandlers.findSalesChannel.aliases.SalesChannel,
+          },
+        },
         SalesChannelHandlers.findSalesChannel
       ),
     },
@@ -95,7 +142,12 @@ const handlers = new Map([
     CreateCartActions.setContext,
     {
       invoke: pipe(
-        getWorkflowInput(CommonHandlers.setContext.aliases.Context),
+        {
+          invoke: {
+            from: CreateCartActions.prepareCartData,
+            alias: CommonHandlers.setContext.aliases.Context,
+          },
+        },
         CommonHandlers.setContext
       ),
     },
@@ -104,7 +156,12 @@ const handlers = new Map([
     CreateCartActions.findRegion,
     {
       invoke: pipe(
-        getWorkflowInput(RegionHandlers.findRegion.aliases.Region),
+        {
+          invoke: {
+            from: CreateCartActions.prepareCartData,
+            alias: RegionHandlers.findRegion.aliases.Region,
+          },
+        },
         RegionHandlers.findRegion
       ),
     },
@@ -115,9 +172,10 @@ const handlers = new Map([
       invoke: pipe(
         {
           invoke: [
-            getWorkflowInput(
-              AddressHandlers.findOrCreateAddresses.aliases.Addresses
-            ).invoke,
+            {
+              from: CreateCartActions.prepareCartData,
+              alias: AddressHandlers.findOrCreateAddresses.aliases.Addresses,
+            },
             {
               from: CreateCartActions.findRegion,
               alias: AddressHandlers.findOrCreateAddresses.aliases.Region,
@@ -133,6 +191,7 @@ const handlers = new Map([
     {
       invoke: pipe(
         {
+          merge: true,
           invoke: [
             {
               from: CreateCartActions.findRegion,
@@ -149,6 +208,10 @@ const handlers = new Map([
             {
               from: CreateCartActions.findOrCreateAddresses,
               alias: CartHandlers.createCart.aliases.Addresses,
+            },
+            {
+              from: CreateCartActions.findSalesChannel,
+              alias: CartHandlers.createCart.aliases.SalesChannel,
             },
           ],
         },
@@ -168,24 +231,112 @@ const handlers = new Map([
     },
   ],
   [
-    CreateCartActions.attachLineItems,
+    CreateCartActions.generateLineItems,
     {
       invoke: pipe(
         {
           invoke: [
-            getWorkflowInput(
-              CartHandlers.attachLineItemsToCart.aliases.LineItems
-            ).invoke,
+            {
+              from: CreateCartActions.prepareCartData,
+              alias: CartHandlers.generateLineItems.aliases.LineItems,
+            },
             {
               from: CreateCartActions.createCart,
-              alias: CartHandlers.attachLineItemsToCart.aliases.Cart,
+              alias: CartHandlers.refreshAdjustments.aliases.Cart,
             },
           ],
         },
-        CartHandlers.attachLineItemsToCart
+        CartHandlers.generateLineItems
       ),
     },
   ],
+  [
+    CreateCartActions.refreshAdjustments,
+    {
+      invoke: pipe(
+        {
+          invoke: [
+            {
+              from: CreateCartActions.generateLineItems,
+              alias: CartHandlers.generateLineItems.aliases.LineItems,
+            },
+            {
+              from: CreateCartActions.createCart,
+              alias: CartHandlers.refreshAdjustments.aliases.Cart,
+            },
+          ],
+        },
+        CartHandlers.refreshAdjustments
+      ),
+    },
+  ],
+  [
+    CreateCartActions.validateLineItemsForCart,
+    {
+      invoke: pipe(
+        {
+          invoke: [
+            {
+              from: CreateCartActions.generateLineItems,
+              alias: CartHandlers.generateLineItems.aliases.LineItems,
+            },
+            {
+              from: CreateCartActions.createCart,
+              alias: CartHandlers.refreshAdjustments.aliases.Cart,
+            },
+          ],
+        },
+        CartHandlers.validateLineItemsForCart
+      ),
+    },
+  ],
+  [
+    CreateCartActions.confirmLineItemQuantities,
+    {
+      invoke: pipe(
+        {
+          invoke: [
+            {
+              from: CreateCartActions.generateLineItems,
+              alias: CartHandlers.generateLineItems.aliases.LineItems,
+            },
+            {
+              from: CreateCartActions.createCart,
+              alias: CartHandlers.refreshAdjustments.aliases.Cart,
+            },
+          ],
+        },
+        CartHandlers.confirmQuantitiesForLineItems
+      ),
+    },
+  ],
+  [
+    CreateCartActions.createLineItems,
+    {
+      invoke: pipe(
+        {
+          invoke: [
+            {
+              from: CreateCartActions.generateLineItems,
+              alias: CartHandlers.generateLineItems.aliases.LineItems,
+            },
+          ],
+        },
+        CartHandlers.createLineItems
+      ),
+      compensate: pipe(
+        {
+          invoke: [
+            {
+              from: CreateCartActions.createLineItems,
+              alias: CartHandlers.createLineItems.aliases.CreatedLineItems,
+            },
+          ],
+        },
+        CartHandlers.removeLineItems
+      ),
+    },
+  ]
 ])
 
 WorkflowManager.register(Workflows.CreateCart, workflowSteps, handlers)

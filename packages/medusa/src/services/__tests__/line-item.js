@@ -1,5 +1,7 @@
 import { IdMap, MockManager, MockRepository } from "medusa-test-utils"
+
 import { FlagRouter } from "@medusajs/utils"
+import { In } from "typeorm"
 import LineItemService from "../line-item"
 import { PricingServiceMock } from "../__mocks__/pricing"
 import { ProductVariantServiceMock } from "../__mocks__/product-variant"
@@ -296,20 +298,9 @@ const unknownVariantId = "unknown-variant"
         it("successfully deletes", async () => {
           await lineItemService.delete(IdMap.getId("test-line-item"))
 
-          expect(lineItemRepository.remove).toHaveBeenCalledTimes(1)
-          expect(lineItemRepository.remove).toHaveBeenCalledWith({
-            id: IdMap.getId("test-line-item"),
-            variant_id: IdMap.getId("test-variant"),
-            variant: {
-              id: IdMap.getId("test-variant"),
-              title: "Test variant",
-            },
-            cart_id: IdMap.getId("test-cart"),
-            title: "Test product",
-            description: "Test variant",
-            thumbnail: "",
-            unit_price: 50,
-            quantity: 1,
+          expect(lineItemRepository.delete).toHaveBeenCalledTimes(1)
+          expect(lineItemRepository.delete).toHaveBeenCalledWith({
+            id: In([IdMap.getId("test-line-item")]),
           })
         })
       })
