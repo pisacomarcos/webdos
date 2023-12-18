@@ -357,7 +357,7 @@ export const MoneyAmountRepository = dataSource
       variant_id: string,
       region_id?: string,
       currency_code?: string,
-      customer_id?: string,
+      customer_id?: string | null,
       include_discount_prices?: boolean,
       include_tax_inclusive_pricing = false
     ): Promise<[MoneyAmount[], number]> {
@@ -431,7 +431,7 @@ export const MoneyAmountRepository = dataSource
       variant_ids: string | string[],
       region_id?: string,
       currency_code?: string,
-      customer_id?: string,
+      customer_id?: string | null,
       include_discount_prices?: boolean,
       include_tax_inclusive_pricing = false
     ): Promise<[Record<string, MoneyAmount[]>, number]> {
