@@ -12,11 +12,22 @@ const ITEMS_REL_NAME = "items"
 const REGION_REL_NAME = "region"
 
 export const OrderRepository = dataSource.getRepository(Order).extend({
-  async findWithRelations(
+  async findWithRelationsAndCount_(
     relations: FindOptionsRelations<Order> = {},
-    optionsWithoutRelations: Omit<FindManyOptions<Order>, "relations"> = {}
-  ): Promise<Order[]> {
-    const entities = await this.find(optionsWithoutRelations)
+    optionsWithoutRelations: Omit<FindManyOptions<Order>, "relations"> = {},
+    { shouldCount }: { shouldCount?: boolean } = { shouldCount: true }
+  ): Promise<[Order[], number]> {
+    let entities: Order[] = []
+    let count = 0
+
+    if (shouldCount) {
+      const result = await this.findAndCount(optionsWithoutRelations)
+      entities = result[0]
+      count = result[1]
+    } else {
+      entities = await this.find(optionsWithoutRelations)
+    }
+
     const entitiesIds = entities.map(({ id }) => id)
 
     const groupedRelations = getGroupedRelations(objectToStringPath(relations))
@@ -36,7 +47,16 @@ export const OrderRepository = dataSource.getRepository(Order).extend({
     ).then(flatten)
 
     const entitiesAndRelations = entities.concat(entitiesIdsWithRelations)
-    return mergeEntitiesWithRelations<Order>(entitiesAndRelations)
+    return [mergeEntitiesWithRelations<Order>(entitiesAndRelations), count]
+  },
+
+  async findWithRelationsAndCount(
+    relations: FindOptionsRelations<Order> = {},
+    optionsWithoutRelations: Omit<FindManyOptions<Order>, "relations"> = {}
+  ): Promise<[Order[], number]> {
+    return this.findWithRelationsAndCount_(relations, optionsWithoutRelations, {
+      shouldCount: true,
+    })
   },
 
   async findOneWithRelations(
@@ -46,11 +66,13 @@ export const OrderRepository = dataSource.getRepository(Order).extend({
     // Limit 1
     optionsWithoutRelations.take = 1
 
-    const result = await this.findWithRelations(
+    const [orders] = await this.findWithRelationsAndCount_(
       relations,
-      optionsWithoutRelations
+      optionsWithoutRelations,
+      { shouldCount: false }
     )
-    return result[0]
+
+    return orders[0]
   },
 })
 
