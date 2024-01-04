@@ -1,4 +1,16 @@
 import {
+  CommonTypes,
+  InternalModuleDeclaration,
+  MedusaContainer,
+  ModuleDefinition,
+} from "@medusajs/types"
+import {
+  ContainerRegistrationKeys,
+  FlagRouter,
+  MedusaV2Flag,
+  isObject,
+} from "@medusajs/utils"
+import {
   MODULE_PACKAGE_NAMES,
   MedusaApp,
   MedusaAppOutput,
@@ -6,18 +18,10 @@ import {
   Modules,
   ModulesDefinition,
 } from "@medusajs/modules-sdk"
-import {
-  CommonTypes,
-  InternalModuleDeclaration,
-  MedusaContainer,
-  ModuleDefinition,
-} from "@medusajs/types"
-import { FlagRouter, MedusaV2Flag } from "@medusajs/utils"
 
-import { ContainerRegistrationKeys, isObject } from "@medusajs/utils"
 import { asValue } from "awilix"
-import { remoteQueryFetchData } from ".."
 import { joinerConfig } from "../joiner-config"
+import { remoteQueryFetchData } from ".."
 
 export function mergeDefaultModules(
   modulesConfig: CommonTypes.ConfigModule["modules"]
@@ -128,7 +132,10 @@ export const loadMedusaApp = async (
     return medusaApp
   }
 
-  container.register("remoteLink", asValue(medusaApp.link))
+  container.register(
+    ContainerRegistrationKeys.REMOTE_LINK,
+    asValue(medusaApp.link)
+  )
   container.register(
     ContainerRegistrationKeys.REMOTE_QUERY,
     asValue(medusaApp.query)

@@ -5,6 +5,8 @@ import {
   ProductVariantService,
   RegionService,
 } from "../../../services"
+import { FlagRouter, MedusaV2Flag, promiseAll } from "@medusajs/utils"
+import { IPricingModuleService, RemoteQueryFunction } from "@medusajs/types"
 import {
   InjectedProps,
   OperationType,
@@ -16,7 +18,7 @@ import {
   TBuiltPriceListImportLine,
   TParsedPriceListImportRowData,
 } from "./types"
-import { computerizeAmount, MedusaError } from "medusa-core-utils"
+import { MedusaError, computerizeAmount } from "medusa-core-utils"
 
 import { BatchJob } from "../../../models"
 import { CreateBatchJobInput } from "../../../types/batch-job"
@@ -24,7 +26,7 @@ import CsvParser from "../../../services/csv-parser"
 import { EntityManager } from "typeorm"
 import { PriceListPriceCreateInput } from "../../../types/price-list"
 import { TParsedProductImportRowData } from "../product/types"
-import { promiseAll } from "@medusajs/utils"
+import { importPriceListWorkflow } from "@medusajs/core-flows"
 
 /*
  * Default strategy class used for a batch import of products/variants.
@@ -45,12 +47,21 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
   protected readonly priceListService_: PriceListService
   protected readonly batchJobService_: BatchJobService
   protected readonly productVariantService_: ProductVariantService
+  protected readonly featureFlagRouter_: FlagRouter
 
   protected readonly csvParser_: CsvParser<
     PriceListImportCsvSchema,
     Record<string, string>,
     Record<string, string>
   >
+
+  protected get remoteQuery(): RemoteQueryFunction {
+    return this.__container__.remoteQuery
+  }
+
+  protected get pricingModuleService(): IPricingModuleService {
+    return this.__container__.pricingModuleService
+  }
 
   constructor({
     batchJobService,
@@ -59,6 +70,7 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
     regionService,
     fileService,
     manager,
+    featureFlagRouter,
   }: InjectedProps) {
     // eslint-disable-next-line prefer-rest-params
     super(arguments[0])
@@ -71,6 +83,7 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
     this.priceListService_ = priceListService
     this.productVariantService_ = productVariantService
     this.regionService_ = regionService
+    this.featureFlagRouter_ = featureFlagRouter
   }
 
   async buildTemplate(): Promise<string> {
@@ -110,7 +123,13 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
 
     // Validate that PriceList exists
     const priceListId = batchJob.context.price_list_id as string
-    await this.priceListService_.withTransaction(manager).retrieve(priceListId)
+    if (this.featureFlagRouter_.isFeatureEnabled(MedusaV2Flag.key)) {
+      await this.pricingModuleService.retrievePriceList(priceListId)
+    } else {
+      await this.priceListService_
+        .withTransaction(manager)
+        .retrieve(priceListId)
+    }
 
     return batchJob
   }
@@ -131,6 +150,64 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
 
     const pricesToCreate: PriceListImportOperation[] = []
 
+    const invalidVariantIds: string[] = []
+    const invalidVariantSkus: string[] = []
+
+    const csvDataRowIds = [
+      ...new Set(csvData.map((row) => `${row[PriceListRowKeys.VARIANT_ID]}`)),
+    ]
+    const csvDataRowSkus = [
+      ...new Set(csvData.map((row) => `${row[PriceListRowKeys.VARIANT_SKU]}`)),
+    ]
+
+    let idVariants: {
+      id: string
+    }[] = []
+    let skuVariants: {
+      id: string
+      sku: string | null
+    }[] = []
+    if (this.featureFlagRouter_.isFeatureEnabled(MedusaV2Flag.key)) {
+      const idQuery = {
+        variants: {
+          __args: {
+            id: csvDataRowIds,
+          },
+          fields: ["id"],
+        },
+      }
+
+      idVariants = await this.remoteQuery(idQuery)
+
+      const skuQuery = {
+        variants: {
+          __args: {
+            sku: csvDataRowSkus,
+          },
+          fields: ["id", "sku"],
+        },
+      }
+
+      skuVariants = await this.remoteQuery(skuQuery)
+    } else {
+      idVariants = await this.productVariantService_.list(
+        {
+          id: csvDataRowIds,
+        },
+        { select: ["id"] }
+      )
+
+      skuVariants = await this.productVariantService_.list(
+        {
+          sku: csvDataRowSkus,
+        },
+        { select: ["id", "sku"] }
+      )
+    }
+
+    const skuVariantMap = new Map(skuVariants.map(({ id, sku }) => [sku, id]))
+    const variantIdSet = new Set(idVariants.map(({ id }) => id))
+
     for (const row of csvData) {
       let variantId = row[PriceListRowKeys.VARIANT_ID]
 
@@ -141,19 +218,14 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
             "SKU or ID is required"
           )
         }
-
-        const variant = await this.productVariantService_.retrieveBySKU(
-          `${row[PriceListRowKeys.VARIANT_SKU]}`,
-          {
-            select: ["id"],
-          }
-        )
-        variantId = variant.id
+        variantId = skuVariantMap.get(`${row[PriceListRowKeys.VARIANT_SKU]}`)!
+        if (!variantId) {
+          invalidVariantSkus.push(`${row[PriceListRowKeys.VARIANT_SKU]}`)
+        }
       } else {
-        // Validate that product exists
-        await this.productVariantService_.retrieve(`${variantId}`, {
-          select: ["id"],
-        })
+        if (!variantIdSet.has(`${variantId}`)) {
+          invalidVariantIds.push(`${variantId}`)
+        }
       }
 
       const pricesOperationData = await this.prepareVariantPrices(
@@ -164,6 +236,22 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
         variant_id: `${variantId}`,
         prices: pricesOperationData,
       })
+    }
+
+    if (invalidVariantIds.length || invalidVariantSkus.length) {
+      const invalidVariantIdsError =
+        invalidVariantIds.length &&
+        `Variants with ids: ${invalidVariantIds.join(", ")} not found`
+      const invalidVariantSkusError =
+        invalidVariantSkus.length &&
+        `Variants with skus: ${invalidVariantSkus.join(", ")} not found`
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `Invalid input data ${[
+          invalidVariantIdsError,
+          invalidVariantSkusError,
+        ].join(", ")}`
+      )
     }
 
     return {
@@ -184,25 +272,42 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
 
     const operationalPrices: PriceListImportOperationPrice[] = []
 
+    const regions = await this.regionService_
+      .withTransaction(transactionManager)
+      .list(
+        {
+          name: prices
+            .map((price) => {
+              if ("region_name" in price) {
+                return price.region_name
+              }
+              return undefined
+            })
+            .filter((name: string | undefined): name is string => !!name),
+        },
+        {
+          select: ["id", "currency_code", "name"],
+        }
+      )
+
+    const regionsMap = new Map(regions.map((region) => [region.name, region]))
+
     for (const price of prices) {
       const record: Partial<PriceListImportOperationPrice> = {
         amount: price.amount,
       }
 
       if ("region_name" in price) {
-        try {
-          const region = await this.regionService_
-            .withTransaction(transactionManager)
-            .retrieveByName(price.region_name)
-
-          record.region_id = region.id
-          record.currency_code = region.currency_code
-        } catch (e) {
+        const region = regionsMap.get(price.region_name)
+        if (!region) {
           throw new MedusaError(
             MedusaError.Types.INVALID_DATA,
             `Trying to set a price for a region ${price.region_name} that doesn't exist`
           )
         }
+
+        record.region_id = region.id
+        record.currency_code = region.currency_code
       } else {
         // TODO: Verify that currency is activated for store
         record.currency_code = price.currency_code
@@ -297,30 +402,38 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
       const priceListId = batchJob.context.price_list_id
       const txPriceListService = this.priceListService_.withTransaction(manager)
 
-      // Delete Existing prices for price list
-      await txPriceListService.clearPrices(priceListId)
-
       // Upload new prices for price list
       const priceImportOperations = await this.downloadImportOpsFile(
         batchJob,
         OperationType.PricesCreate
       )
 
-      for (const op of priceImportOperations) {
-        try {
-          await txPriceListService.addPrices(
-            priceListId,
-            (op.prices as PriceListPriceCreateInput[]).map(
-              (p: PriceListPriceCreateInput) => {
-                return {
-                  ...p,
-                  variant_id: op.variant_id as string,
+      // Delete Existing prices for price list
+      if (this.featureFlagRouter_.isFeatureEnabled(MedusaV2Flag.key)) {
+        const workflow = importPriceListWorkflow(this.__container__)
+
+        await workflow.run({
+          input: { priceListId, operations: priceImportOperations },
+        })
+      } else {
+        await txPriceListService.clearPrices(priceListId)
+
+        for (const op of priceImportOperations) {
+          try {
+            await txPriceListService.addPrices(
+              priceListId,
+              (op.prices as PriceListPriceCreateInput[]).map(
+                (p: PriceListPriceCreateInput) => {
+                  return {
+                    ...p,
+                    variant_id: op.variant_id as string,
+                  }
                 }
-              }
+              )
             )
-          )
-        } catch (e) {
-          PriceListImportStrategy.throwDescriptiveError(op, e.message)
+          } catch (e) {
+            PriceListImportStrategy.throwDescriptiveError(op, e.message)
+          }
         }
       }
 
@@ -451,7 +564,11 @@ class PriceListImportStrategy extends AbstractBatchJobStrategy {
   private static buildFilename(
     batchJobId: string,
     operation: string,
-    { appendExt }: { appendExt?: string } = { appendExt: undefined }
+    {
+      appendExt,
+    }: {
+      appendExt?: string
+    } = { appendExt: undefined }
   ): string {
     const filename = `imports/price-lists/ops/${batchJobId}-${operation}`
     return appendExt ? filename + appendExt : filename
