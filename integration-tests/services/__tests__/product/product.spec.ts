@@ -15,7 +15,8 @@ describe("product", () => {
     const cwd = path.resolve(path.join(__dirname, "..", ".."))
     await initDb({ cwd })
     shutdownServer = shutdownServer = await startBootstrapApp({ cwd })
-    medusaContainer = getContainer()
+    const container = getContainer()
+    medusaContainer = container ? container : medusaContainer
   })
 
   afterAll(async () => {

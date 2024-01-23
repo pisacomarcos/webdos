@@ -1,8 +1,8 @@
 const AppUtils = {
-  container_: null,
+  container_: {},
 
   setContainer: function (container) {
-    this.container_ = container
+    this.container_[process.env.JEST_WORKER_ID || "1"] = container
   },
 }
 
@@ -13,6 +13,6 @@ module.exports = {
     instance.setContainer(container)
   },
   getContainer: () => {
-    return instance.container_
+    return instance.container_[process.env.JEST_WORKER_ID || "1"]
   },
 }
