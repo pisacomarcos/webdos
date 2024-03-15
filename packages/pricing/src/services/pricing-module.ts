@@ -700,7 +700,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.PriceSetDTO[]>(
       priceSets,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -718,7 +718,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.MoneyAmountDTO[]>(
       moneyAmounts,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -736,7 +736,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.MoneyAmountDTO[]>(
       moneyAmounts,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -751,7 +751,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.RuleTypeDTO[]>(
       ruleTypes,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -766,7 +766,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.RuleTypeDTO[]>(
       ruleTypes,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -784,7 +784,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<
       PricingTypes.PriceSetMoneyAmountRulesDTO[]
     >(records, {
-      populate: true,
+      populate: "*",
     })
   }
 
@@ -801,7 +801,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<
       PricingTypes.PriceSetMoneyAmountRulesDTO[]
     >(records, {
-      populate: true,
+      populate: "*",
     })
   }
 
@@ -818,7 +818,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.PriceRuleDTO[]>(
       priceRules,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -833,7 +833,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.PriceRuleDTO[]>(
       priceRules,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -848,7 +848,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.PriceListDTO[]>(
       priceLists,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -999,7 +999,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.PriceListDTO[]>(
       priceLists,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -1119,7 +1119,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<
       PricingTypes.PriceListRuleDTO[]
     >(priceLists, {
-      populate: true,
+      populate: "*",
     })
   }
 
@@ -1144,7 +1144,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<
       PricingTypes.PriceListRuleDTO[]
     >(priceLists, {
-      populate: true,
+      populate: "*",
     })
   }
 
@@ -1610,7 +1610,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.PriceListDTO[]>(
       priceLists,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
@@ -1672,7 +1672,7 @@ export default class PricingModuleService<
     return await this.baseRepository_.serialize<PricingTypes.PriceListDTO[]>(
       priceLists,
       {
-        populate: true,
+        populate: "*",
       }
     )
   }
