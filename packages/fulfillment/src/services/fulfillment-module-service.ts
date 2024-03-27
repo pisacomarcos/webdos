@@ -19,11 +19,14 @@ import {
   getSetDifference,
   InjectManager,
   InjectTransactionManager,
+  isPresent,
   MedusaContext,
   MedusaError,
   ModulesSdkUtils,
   promiseAll,
 } from "@medusajs/utils"
+
+import Ajv from "ajv"
 
 import {
   Fulfillment,
@@ -39,6 +42,8 @@ import { isContextValid, validateRules } from "@utils"
 import { entityNameToLinkableKeysMap, joinerConfig } from "../joiner-config"
 import FulfillmentProviderService from "./fulfillment-provider"
 import { Modules } from "@medusajs/modules-sdk"
+
+const ajv = new Ajv()
 
 const generateMethodForModels = [
   ServiceZone,
@@ -155,14 +160,24 @@ export default class FulfillmentModuleService<
 
     if (context) {
       shippingOptions = shippingOptions.filter((shippingOption) => {
-        if (!shippingOption.rules?.length) {
+        if (!isPresent(shippingOption.conditions)) {
           return true
         }
 
-        return isContextValid(
-          context,
-          shippingOption.rules.map((r) => r)
-        )
+        const validate = ajv.compile({
+          type: "object",
+          properties: shippingOption.conditions || {},
+        })
+        return validate(context)
+
+        // if (!shippingOption.rules?.length) {
+        //   return true
+        // }
+
+        // return isContextValid(
+        //   context,
+        //   shippingOption.rules.map((r) => r)
+        // )
       })
     }
 
