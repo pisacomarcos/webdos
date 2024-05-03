@@ -1,5 +1,6 @@
 import { BaseFilterable } from "../dal"
 import { OperatorMap } from "../dal/utils"
+import { ProductVariantPricing } from "@medusajs/medusa/src/types/pricing"
 
 /**
  * @enum
@@ -252,6 +253,10 @@ export interface ProductVariantDTO {
    * The associated product id.
    */
   product_id?: string | null
+  /**
+   * The associated product variant prices.
+   */
+  prices: ProductVariantPricing[]
   /**
    * he ranking of the variant among other variants associated with the product.
    */
