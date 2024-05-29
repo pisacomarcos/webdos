@@ -157,8 +157,12 @@ describe("Google auth provider", () => {
       }),
       create: jest.fn().mockImplementation(() => {
         return {
-          entity_id: "test@admin.com",
-          provider: "google",
+          provider_identities: [
+            {
+              entity_id: "test@admin.com",
+              provider: "google",
+            },
+          ],
         }
       }),
     }
@@ -176,8 +180,12 @@ describe("Google auth provider", () => {
       success: true,
       successRedirectUrl: baseUrl,
       authIdentity: {
-        entity_id: "test@admin.com",
-        provider: "google",
+        provider_identities: [
+          {
+            entity_id: "test@admin.com",
+            provider: "google",
+          },
+        ],
       },
     })
   })
@@ -186,8 +194,12 @@ describe("Google auth provider", () => {
     const authServiceSpies = {
       retrieve: jest.fn().mockImplementation(() => {
         return {
-          entity_id: "test@admin.com",
-          provider: "google",
+          provider_identities: [
+            {
+              entity_id: "test@admin.com",
+              provider: "google",
+            },
+          ],
         }
       }),
       create: jest.fn().mockImplementation(() => {
@@ -208,8 +220,12 @@ describe("Google auth provider", () => {
       success: true,
       successRedirectUrl: baseUrl,
       authIdentity: {
-        entity_id: "test@admin.com",
-        provider: "google",
+        provider_identities: [
+          {
+            entity_id: "test@admin.com",
+            provider: "google",
+          },
+        ],
       },
     })
   })
