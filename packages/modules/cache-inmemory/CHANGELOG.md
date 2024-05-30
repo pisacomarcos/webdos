@@ -1,5 +1,14 @@
 # @medusajs/cache-inmemory
 
+## 1.8.11
+
+### Patch Changes
+
+- [#7341](https://github.com/medusajs/medusa/pull/7341) [`2e42e053d4c9d5445d227bdc268c66713aad8e2e`](https://github.com/medusajs/medusa/commit/2e42e053d4c9d5445d227bdc268c66713aad8e2e) Thanks [@olivermrbl](https://github.com/olivermrbl)! - chore: Preview release changeset
+
+- Updated dependencies [[`2e42e053d4c9d5445d227bdc268c66713aad8e2e`](https://github.com/medusajs/medusa/commit/2e42e053d4c9d5445d227bdc268c66713aad8e2e), [`144e09e852a5be625d1e325b70f9255aa36369a5`](https://github.com/medusajs/medusa/commit/144e09e852a5be625d1e325b70f9255aa36369a5), [`39c3f6d92a9f77b8befdde2693bd8a215080f90e`](https://github.com/medusajs/medusa/commit/39c3f6d92a9f77b8befdde2693bd8a215080f90e)]:
+  - @medusajs/modules-sdk@1.13.0
+
 ## 1.8.10
 
 ### Patch Changes

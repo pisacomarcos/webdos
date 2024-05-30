@@ -1,5 +1,27 @@
 # @medusajs/utils
 
+## 1.12.0
+
+### Minor Changes
+
+- [#7282](https://github.com/medusajs/medusa/pull/7282) [`144e09e852a5be625d1e325b70f9255aa36369a5`](https://github.com/medusajs/medusa/commit/144e09e852a5be625d1e325b70f9255aa36369a5) Thanks [@sradevski](https://github.com/sradevski)! - Add basic implementation of a notification module
+
+### Patch Changes
+
+- [#7248](https://github.com/medusajs/medusa/pull/7248) [`0430e63b0bc1b3ed9c13bb6514b22474676e9509`](https://github.com/medusajs/medusa/commit/0430e63b0bc1b3ed9c13bb6514b22474676e9509) Thanks [@riqwan](https://github.com/riqwan)! - feat(core-flows,typers,utils,medusa): add payment auth step to complete cart workflow
+
+- [#7341](https://github.com/medusajs/medusa/pull/7341) [`2e42e053d4c9d5445d227bdc268c66713aad8e2e`](https://github.com/medusajs/medusa/commit/2e42e053d4c9d5445d227bdc268c66713aad8e2e) Thanks [@olivermrbl](https://github.com/olivermrbl)! - chore: Preview release changeset
+
+- [#7262](https://github.com/medusajs/medusa/pull/7262) [`521b4e79268d3998d9fc8ebde3450e629d9c5daf`](https://github.com/medusajs/medusa/commit/521b4e79268d3998d9fc8ebde3450e629d9c5daf) Thanks [@fPolic](https://github.com/fPolic)! - feat: add Order<>Fulfillment link
+
+- [#7286](https://github.com/medusajs/medusa/pull/7286) [`45e2228a07fef92c68e0ac3a209554f7e02b5773`](https://github.com/medusajs/medusa/commit/45e2228a07fef92c68e0ac3a209554f7e02b5773) Thanks [@adrien2p](https://github.com/adrien2p)! - chore(utils): Provide a mikro orm base entity
+
+- [#7249](https://github.com/medusajs/medusa/pull/7249) [`a736e728b8a527119bc9ac331878a030a1e8a2f0`](https://github.com/medusajs/medusa/commit/a736e728b8a527119bc9ac331878a030a1e8a2f0) Thanks [@adrien2p](https://github.com/adrien2p)! - fix: Product categories repository and end points
+
+- [#7250](https://github.com/medusajs/medusa/pull/7250) [`5228b14ca94d3a73e1af519fc0c1b12fcaefd462`](https://github.com/medusajs/medusa/commit/5228b14ca94d3a73e1af519fc0c1b12fcaefd462) Thanks [@carlos-r-l-rodrigues](https://github.com/carlos-r-l-rodrigues)! - Create stock reservation on complete cart flow
+
+- [#7169](https://github.com/medusajs/medusa/pull/7169) [`9d3f49531493b4cf73def5a10a57ff0d432cc6db`](https://github.com/medusajs/medusa/commit/9d3f49531493b4cf73def5a10a57ff0d432cc6db) Thanks [@carlos-r-l-rodrigues](https://github.com/carlos-r-l-rodrigues)! - Fulfillment - shipping options with context
+
 ## 1.11.9
 
 ### Patch Changes
