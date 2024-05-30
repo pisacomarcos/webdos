@@ -4,19 +4,12 @@ import {
   SalesChannelDTO,
   StockLocationDTO,
 } from "@medusajs/types"
-import {
-  Button,
-  Container,
-  StatusBadge,
-  Text,
-  toast,
-  usePrompt,
-} from "@medusajs/ui"
+import { Container, StatusBadge, Text, toast, usePrompt } from "@medusajs/ui"
 import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router-dom"
 
 import { ActionMenu } from "../../../../../components/common/action-menu"
 import { BadgeListSummary } from "../../../../../components/common/badge-list-summary"
+import { LinkButton } from "../../../../../components/common/link-button"
 import { useDeleteStockLocation } from "../../../../../hooks/api/stock-locations"
 import { getFormattedAddress } from "../../../../../lib/addresses"
 
@@ -29,7 +22,7 @@ function SalesChannels(props: SalesChannelsProps) {
   const { salesChannels } = props
 
   return (
-    <div className="flex flex-col px-6 py-5">
+    <div className="flex flex-col px-6 py-4">
       <div className="flex items-center justify-between">
         <Text
           size="small"
@@ -42,6 +35,7 @@ function SalesChannels(props: SalesChannelsProps) {
         <div className="flex-1 text-left">
           {salesChannels?.length ? (
             <BadgeListSummary
+              rounded
               inline
               n={3}
               list={salesChannels.map((s) => s.name)}
@@ -72,7 +66,7 @@ function FulfillmentSet(props: FulfillmentSetProps) {
   const fulfillmentSetExists = !!fulfillmentSet
 
   return (
-    <div className="flex flex-col px-6 py-5">
+    <div className="flex flex-col px-6 py-4">
       <div className="flex items-center justify-between">
         <Text
           size="small"
@@ -83,7 +77,7 @@ function FulfillmentSet(props: FulfillmentSetProps) {
           {t(`location.fulfillmentSet.${type}.title`)}
         </Text>
         <div className="flex-1 text-left">
-          <StatusBadge color={fulfillmentSetExists ? "green" : "red"}>
+          <StatusBadge color={fulfillmentSetExists ? "green" : "grey"}>
             {t(fulfillmentSetExists ? "statuses.enabled" : "statuses.disabled")}
           </StatusBadge>
         </div>
@@ -99,7 +93,6 @@ type LocationProps = {
 function Location(props: LocationProps) {
   const { location } = props
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const prompt = usePrompt()
 
   const { mutateAsync: deleteLocation } = useDeleteStockLocation(location.id)
@@ -137,11 +130,11 @@ function Location(props: LocationProps) {
 
   return (
     <Container className="flex flex-col divide-y p-0">
-      <div className="px-6 py-5">
+      <div className="px-6 py-4">
         <div className="flex flex-row items-center justify-between gap-x-4">
           {/* ICON*/}
-          <div className="grow-0 rounded-lg border">
-            <div className="bg-ui-bg-field m-1 rounded-md p-2">
+          <div className="shadow-borders-base flex size-7 items-center justify-center rounded-md">
+            <div className="bg-ui-bg-field flex size-6 items-center justify-center rounded-[4px]">
               <Buildings className="text-ui-fg-subtle" />
             </div>
           </div>
@@ -155,7 +148,7 @@ function Location(props: LocationProps) {
           </div>
 
           {/* ACTION*/}
-          <div className="flex grow-0 items-center gap-4 overflow-hidden">
+          <div className="flex grow-0 items-center gap-4">
             <ActionMenu
               groups={[
                 {
@@ -175,13 +168,9 @@ function Location(props: LocationProps) {
               ]}
             />
             <div className="bg-ui-border-strong h-[12px] w-[1px]" />
-            <Button
-              className="text-ui-fg-interactive -ml-1 rounded-none"
-              onClick={() => navigate(`/settings/locations/${location.id}`)}
-              variant="transparent"
-            >
+            <LinkButton to={`/settings/locations/${location.id}`}>
               {t("actions.viewDetails")}
-            </Button>
+            </LinkButton>
           </div>
         </div>
       </div>

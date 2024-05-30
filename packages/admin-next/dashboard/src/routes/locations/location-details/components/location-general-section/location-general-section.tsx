@@ -1,10 +1,13 @@
 import {
-  ChevronDownMini,
+  ArchiveBox,
+  CheckMini,
   CurrencyDollar,
   Map,
   PencilSquare,
   Plus,
   Trash,
+  TriangleDownMini,
+  XMarkMini,
 } from "@medusajs/icons"
 import {
   FulfillmentSetDTO,
@@ -17,6 +20,7 @@ import {
   Button,
   Container,
   Heading,
+  IconButton,
   StatusBadge,
   Text,
   toast,
@@ -27,7 +31,9 @@ import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 
 import { ActionMenu } from "../../../../../components/common/action-menu"
+import { Divider } from "../../../../../components/common/divider"
 import { NoRecords } from "../../../../../components/common/empty-table-content"
+import { LinkButton } from "../../../../../components/common/link-button"
 import { ListSummary } from "../../../../../components/common/list-summary"
 import { useDeleteShippingOption } from "../../../../../hooks/api/shipping-options"
 import {
@@ -36,13 +42,13 @@ import {
   useDeleteServiceZone,
   useDeleteStockLocation,
 } from "../../../../../hooks/api/stock-locations"
+import { getFormattedAddress } from "../../../../../lib/addresses"
 import { countries as staticCountries } from "../../../../../lib/countries"
 import { formatProvider } from "../../../../../lib/format-provider"
 import {
   isOptionEnabledInStore,
   isReturnOption,
 } from "../../../../../lib/shipping-options"
-import { getFormattedAddress } from "../../../../../lib/addresses"
 
 type LocationGeneralSectionProps = {
   location: StockLocationDTO
@@ -102,7 +108,7 @@ function ShippingOption({
   const prompt = usePrompt()
   const { t } = useTranslation()
 
-  const isInStore = isOptionEnabledInStore(option)
+  const isStoreOption = isOptionEnabledInStore(option)
 
   const { mutateAsync: deleteOption } = useDeleteShippingOption(option.id)
 
@@ -120,36 +126,40 @@ function ShippingOption({
       return
     }
 
-    try {
-      await deleteOption()
-
-      toast.success(t("general.success"), {
-        description: t("location.shippingOptions.toast.delete", {
-          name: option.name,
-        }),
-        dismissLabel: t("actions.close"),
-      })
-    } catch (e) {
-      toast.error(t("general.error"), {
-        description: e.message,
-        dismissLabel: t("actions.close"),
-      })
-    }
+    await deleteOption(undefined, {
+      onSuccess: () => {
+        toast.success(t("general.success"), {
+          description: t("location.shippingOptions.toast.delete", {
+            name: option.name,
+          }),
+          dismissLabel: t("actions.close"),
+        })
+      },
+      onError: (e) => {
+        toast.error(t("general.error"), {
+          description: e.message,
+          dismissLabel: t("actions.close"),
+        })
+      },
+    })
   }
 
   return (
-    <div className="flex items-center justify-between px-4 py-3">
+    <div className="flex items-center justify-between px-3 py-2">
       <div className="flex-1">
         <span className="txt-small font-medium">
           {option.name} - {option.shipping_profile.name} (
           {formatProvider(option.provider_id)})
         </span>
       </div>
-      {isInStore && (
-        <Badge className="mr-4" color="purple">
-          {t("location.shippingOptions.inStore")}
-        </Badge>
-      )}
+      <Badge
+        className="mr-4"
+        color={isStoreOption ? "grey" : "purple"}
+        size="2xsmall"
+        rounded="full"
+      >
+        {isStoreOption ? t("general.store") : t("general.admin")}
+      </Badge>
       <ActionMenu
         groups={[
           {
@@ -164,6 +174,10 @@ function ShippingOption({
                 icon: <CurrencyDollar />,
                 to: `/settings/locations/${locationId}/fulfillment-set/${fulfillmentSetId}/service-zone/${option.service_zone_id}/shipping-option/${option.id}/edit-pricing`,
               },
+            ],
+          },
+          {
+            actions: [
               {
                 label: t("actions.delete"),
                 icon: <Trash />,
@@ -189,7 +203,6 @@ function ServiceZoneOptions({
   fulfillmentSetId,
 }: ServiceZoneOptionsProps) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
 
   const shippingOptions = zone.shipping_options.filter(
     (o) => !isReturnOption(o)
@@ -198,23 +211,18 @@ function ServiceZoneOptions({
   const returnOptions = zone.shipping_options.filter((o) => isReturnOption(o))
 
   return (
-    <>
-      <div className="mt-4 flex flex-col border-t border-dashed px-6 py-4">
+    <div>
+      <Divider variant="dashed" />
+      <div className="flex flex-col px-6 py-4">
         <div className="item-center flex justify-between">
           <span className="text-ui-fg-subtle txt-small self-center font-medium">
             {t("location.serviceZone.shippingOptions")}
           </span>
-          <Button
-            className="text-ui-fg-interactive txt-small px-0 font-medium hover:bg-transparent active:bg-transparent"
-            variant="transparent"
-            onClick={() =>
-              navigate(
-                `/settings/locations/${locationId}/fulfillment-set/${fulfillmentSetId}/service-zone/${zone.id}/shipping-option/create`
-              )
-            }
+          <LinkButton
+            to={`/settings/locations/${locationId}/fulfillment-set/${fulfillmentSetId}/service-zone/${zone.id}/shipping-option/create`}
           >
             {t("location.serviceZone.addOption")}
-          </Button>
+          </LinkButton>
         </div>
 
         {!!shippingOptions.length && (
@@ -231,26 +239,22 @@ function ServiceZoneOptions({
         )}
       </div>
 
-      <div className="-mb-4 flex flex-col border-t border-dashed px-6 py-4">
+      <Divider variant="dashed" />
+
+      <div className="flex flex-col px-6 py-4">
         <div className="item-center flex justify-between">
           <span className="text-ui-fg-subtle txt-small self-center font-medium">
             {t("location.serviceZone.returnOptions")}
           </span>
-          <Button
-            className="text-ui-fg-interactive txt-small px-0 font-medium hover:bg-transparent active:bg-transparent"
-            variant="transparent"
-            onClick={() =>
-              navigate(
-                `/settings/locations/${locationId}/fulfillment-set/${fulfillmentSetId}/service-zone/${zone.id}/shipping-option/create?is_return`
-              )
-            }
+          <LinkButton
+            to={`/settings/locations/${locationId}/fulfillment-set/${fulfillmentSetId}/service-zone/${zone.id}/shipping-option/create?is_return`}
           >
             {t("location.serviceZone.addOption")}
-          </Button>
+          </LinkButton>
         </div>
 
         {!!returnOptions.length && (
-          <div className="shadow-elevation-card-rest bg-ui-bg-subtle mt-4 grid divide-y rounded-md">
+          <div className="shadow-elevation-card-rest bg-ui-bg-subtle grid divide-y rounded-md pt-4">
             {returnOptions.map((o) => (
               <ShippingOption
                 key={o.id}
@@ -263,7 +267,7 @@ function ServiceZoneOptions({
           </div>
         )}
       </div>
-    </>
+    </div>
   )
 }
 
@@ -335,20 +339,23 @@ function ServiceZone({ zone, locationId, fulfillmentSetId }: ServiceZoneProps) {
   }, [zone.shipping_options])
 
   return (
-    <div className="py-4">
-      <div className="flex flex-row items-center justify-between gap-x-4 px-6">
+    <div className="flex flex-col">
+      <div className="flex flex-row items-center justify-between gap-x-4 px-6 py-4">
         {/* ICON*/}
-        <div className="grow-0 rounded-lg border">
-          <div className="bg-ui-bg-field m-1 rounded-md p-2">
+        <div className="shadow-borders-base flex size-7 items-center justify-center rounded-md">
+          <div className="bg-ui-bg-field flex size-6 items-center justify-center rounded-[4px]">
             <Map className="text-ui-fg-subtle" />
           </div>
         </div>
 
         {/* INFO*/}
         <div className="grow-1 flex flex-1 flex-col">
-          <Text weight="plus">{zone.name}</Text>
+          <Text size="small" leading="compact" weight="plus">
+            {zone.name}
+          </Text>
           <div className="flex items-center gap-2">
             <ListSummary
+              variant="base"
               list={countries.map((c) => c.display_name)}
               inline
               n={1}
@@ -371,23 +378,19 @@ function ServiceZone({ zone, locationId, fulfillmentSetId }: ServiceZoneProps) {
         </div>
 
         {/* ACTION*/}
-        <div className="itemx-center flex grow-0 gap-1">
-          <Button
+        <div className="flex grow-0 items-center gap-4">
+          <IconButton
+            size="small"
             onClick={() => setOpen((s) => !s)}
-            className="flex items-center justify-center"
             variant="transparent"
-            style={{
-              transform: `translateY(${!open ? -4 : -2}px)`,
-              transition: ".1s transform ease-in-out",
-            }}
           >
-            <ChevronDownMini
+            <TriangleDownMini
               style={{
                 transform: `rotate(${!open ? 0 : 180}deg)`,
                 transition: ".2s transform ease-in-out",
               }}
             />
-          </Button>
+          </IconButton>
           <ActionMenu
             groups={[
               {
@@ -402,6 +405,10 @@ function ServiceZone({ zone, locationId, fulfillmentSetId }: ServiceZoneProps) {
                     icon: <Map />,
                     to: `/settings/locations/${locationId}/fulfillment-set/${fulfillmentSetId}/service-zone/${zone.id}/edit-areas`,
                   },
+                ],
+              },
+              {
+                actions: [
                   {
                     label: t("actions.delete"),
                     icon: <Trash />,
@@ -414,13 +421,11 @@ function ServiceZone({ zone, locationId, fulfillmentSetId }: ServiceZoneProps) {
         </div>
       </div>
       {open && (
-        <div>
-          <ServiceZoneOptions
-            fulfillmentSetId={fulfillmentSetId}
-            locationId={locationId}
-            zone={zone}
-          />
-        </div>
+        <ServiceZoneOptions
+          fulfillmentSetId={fulfillmentSetId}
+          locationId={locationId}
+          zone={zone}
+        />
       )}
     </div>
   )
@@ -531,7 +536,11 @@ function FulfillmentSet(props: FulfillmentSetProps) {
                       disabled: !fulfillmentSetExists,
                     },
                     {
-                      icon: <PencilSquare />,
+                      icon: fulfillmentSetExists ? (
+                        <XMarkMini />
+                      ) : (
+                        <CheckMini />
+                      ),
                       label: fulfillmentSetExists
                         ? t("actions.disable")
                         : t("actions.enable"),
@@ -629,6 +638,11 @@ const Actions = ({ location }: { location: StockLocationDTO }) => {
               icon: <PencilSquare />,
               label: t("actions.edit"),
               to: `edit`,
+            },
+            {
+              icon: <ArchiveBox />,
+              label: t("location.viewInventory"),
+              to: `/inventory?location_id=${location.id}`,
             },
           ],
         },
