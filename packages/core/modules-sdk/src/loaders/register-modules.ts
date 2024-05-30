@@ -5,7 +5,7 @@ import {
   ModuleExports,
   ModuleResolution,
 } from "@medusajs/types"
-import { isObject, isString } from "@medusajs/utils"
+import { isObject, isString, upperCaseFirst } from "@medusajs/utils"
 import resolveCwd from "resolve-cwd"
 import { ModulesDefinition } from "../definitions"
 import { MODULE_RESOURCE_TYPE, MODULE_SCOPE } from "../types"
@@ -21,7 +21,12 @@ export const registerMedusaModule = (
 ): Record<string, ModuleResolution> => {
   const moduleResolutions = {} as Record<string, ModuleResolution>
 
-  const modDefinition = definition ?? ModulesDefinition[moduleKey]
+  const modDefinition = definition ??
+    ModulesDefinition[moduleKey] ?? {
+      key: moduleKey,
+      registrationName: moduleKey,
+      label: upperCaseFirst(moduleKey),
+    }
 
   const modDeclaration =
     moduleDeclaration ??
@@ -35,8 +40,12 @@ export const registerMedusaModule = (
     isObject(modDeclaration) &&
     modDeclaration?.scope === MODULE_SCOPE.EXTERNAL
   ) {
-    // TODO: getExternalModuleResolution(...)
-    throw new Error("External Modules are not supported yet.")
+    moduleResolutions[moduleKey] = getExternalModuleResolution(
+      modDefinition,
+      modDeclaration as ExternalModuleDeclaration
+    )
+
+    return moduleResolutions
   }
 
   if (modDefinition === undefined) {
@@ -130,7 +139,7 @@ function getInternalModuleResolution(
   }
 
   const isObj = isObject(moduleConfig)
-  let resolutionPath = definition.defaultPackage
+  let resolutionPath = definition?.defaultPackage
 
   // If user added a module and it's overridable, we resolve that instead
   const isStr = isString(moduleConfig)
@@ -148,14 +157,31 @@ function getInternalModuleResolution(
     definition,
     dependencies: [
       ...new Set(
-        (definition.dependencies || []).concat(additionalDependencies)
+        (definition?.dependencies ?? []).concat(additionalDependencies)
       ),
     ],
     moduleDeclaration: {
-      ...(definition.defaultModuleDeclaration ?? {}),
+      ...(definition?.defaultModuleDeclaration ?? {}),
       ...moduleDeclaration,
     },
     moduleExports,
     options: isObj ? moduleConfig.options ?? {} : {},
+  }
+}
+
+function getExternalModuleResolution(
+  definition: ModuleDefinition,
+  moduleConfig: ExternalModuleDeclaration
+): ModuleResolution {
+  if (!moduleConfig.server) {
+    throw new Error(
+      `Module: External module ${definition.label} is missing server configuration.`
+    )
+  }
+
+  return {
+    resolutionPath: false,
+    definition,
+    moduleDeclaration: moduleConfig,
   }
 }

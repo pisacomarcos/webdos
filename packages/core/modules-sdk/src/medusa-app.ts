@@ -2,22 +2,24 @@ import { mergeTypeDefs } from "@graphql-tools/merge"
 import { makeExecutableSchema } from "@graphql-tools/schema"
 import { RemoteFetchDataCallback } from "@medusajs/orchestration"
 import {
-  ExternalModuleDeclaration,
   InternalModuleDeclaration,
   LoadedModule,
-  MedusaContainer,
+  MedusaAppOptions,
+  MedusaAppOutput,
+  MedusaModuleConfig,
   ModuleDefinition,
   ModuleExports,
   ModuleJoinerConfig,
   ModuleServiceInitializeOptions,
   RemoteJoinerOptions,
   RemoteJoinerQuery,
-  RemoteQueryFunction,
+  RunMigrationFn
 } from "@medusajs/types"
 import {
   ContainerRegistrationKeys,
   ModulesSdkUtils,
   createMedusaContainer,
+  isDefined,
   isObject,
   isString,
   promiseAll,
@@ -33,40 +35,9 @@ import { RemoteLink } from "./remote-link"
 import { RemoteQuery } from "./remote-query"
 import { MODULE_RESOURCE_TYPE, MODULE_SCOPE } from "./types"
 import { cleanGraphQLSchema } from "./utils"
+import * as Servers from "./utils/servers"
 
 const LinkModulePackage = MODULE_PACKAGE_NAMES[Modules.LINK]
-
-export type RunMigrationFn = (
-  options?: ModuleServiceInitializeOptions,
-  injectedDependencies?: Record<any, any>
-) => Promise<void>
-
-export type MedusaModuleConfig = {
-  [key: string | Modules]:
-    | string
-    | boolean
-    | Partial<InternalModuleDeclaration | ExternalModuleDeclaration>
-}
-
-export type SharedResources = {
-  database?: ModuleServiceInitializeOptions["database"] & {
-    /**
-     * {
-     *   name?: string
-     *   afterCreate?: Function
-     *   min?: number
-     *   max?: number
-     *   refreshIdle?: boolean
-     *   idleTimeoutMillis?: number
-     *   reapIntervalMillis?: number
-     *   returnToHead?: boolean
-     *   priorityRange?: number
-     *   log?: (message: string, logLevel: string) => void
-     * }
-     */
-    pool?: Record<string, unknown>
-  }
-}
 
 export async function loadModules(
   modulesConfig,
@@ -206,37 +177,6 @@ function registerCustomJoinerConfigs(servicesConfig: ModuleJoinerConfig[]) {
   }
 }
 
-export type MedusaAppOutput = {
-  modules: Record<string, LoadedModule | LoadedModule[]>
-  link: RemoteLink | undefined
-  query: RemoteQueryFunction
-  entitiesMap?: Record<string, any>
-  notFound?: Record<string, Record<string, string>>
-  runMigrations: RunMigrationFn
-  revertMigrations: RunMigrationFn
-  onApplicationShutdown: () => Promise<void>
-  onApplicationPrepareShutdown: () => Promise<void>
-}
-
-export type MedusaAppOptions = {
-  workerMode?: "shared" | "worker" | "server"
-  sharedContainer?: MedusaContainer
-  sharedResourcesConfig?: SharedResources
-  loadedModules?: LoadedModule[]
-  servicesConfig?: ModuleJoinerConfig[]
-  modulesConfigPath?: string
-  modulesConfigFileName?: string
-  modulesConfig?: MedusaModuleConfig
-  linkModules?: ModuleJoinerConfig | ModuleJoinerConfig[]
-  remoteFetchData?: RemoteFetchDataCallback
-  injectedDependencies?: any
-  onApplicationStartCb?: () => void
-  /**
-   * Forces the modules bootstrapper to only run the modules loaders and return prematurely
-   */
-  loaderOnly?: boolean
-}
-
 async function MedusaApp_({
   sharedContainer,
   sharedResourcesConfig,
@@ -247,11 +187,10 @@ async function MedusaApp_({
   linkModules,
   remoteFetchData,
   injectedDependencies = {},
-  onApplicationStartCb,
   migrationOnly = false,
   loaderOnly = false,
   workerMode = "server",
-}: MedusaAppOptions & {
+}: MedusaAppOptions<RemoteFetchDataCallback> & {
   migrationOnly?: boolean
 } = {}): Promise<MedusaAppOutput> {
   const sharedContainer_ = createMedusaContainer({}, sharedContainer)
@@ -447,11 +386,19 @@ async function MedusaApp_({
     notFound,
     runMigrations,
     revertMigrations,
+    listen: async (protocol, port, options?: Record<string, any>) => {
+      if (!protocol || !isDefined(Servers[protocol])) {
+        throw new Error(`"${protocol}" protocol is not supported`)
+      }
+
+      const serverConstructor = Servers[protocol].default
+      await serverConstructor(sharedContainer_, allModules)(port, options)
+    },
   }
 }
 
 export async function MedusaApp(
-  options: MedusaAppOptions = {}
+  options: MedusaAppOptions<RemoteFetchDataCallback> = {}
 ): Promise<MedusaAppOutput> {
   try {
     return await MedusaApp_(options)
@@ -461,7 +408,7 @@ export async function MedusaApp(
 }
 
 export async function MedusaAppMigrateUp(
-  options: MedusaAppOptions = {}
+  options: MedusaAppOptions<RemoteFetchDataCallback> = {}
 ): Promise<void> {
   const migrationOnly = true
 
@@ -474,7 +421,7 @@ export async function MedusaAppMigrateUp(
 }
 
 export async function MedusaAppMigrateDown(
-  options: MedusaAppOptions = {}
+  options: MedusaAppOptions<RemoteFetchDataCallback> = {}
 ): Promise<void> {
   const migrationOnly = true
 

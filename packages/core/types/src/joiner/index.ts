@@ -39,7 +39,8 @@ export interface JoinerServiceConfig {
     | string
     | {
         path: string
-        forwardArgumentsOnPath: string[]
+        forwardArgumentsOnPath?: string[]
+        isList?: boolean
       }
   >
   primaryKeys: string[]
